@@ -4,652 +4,201 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
-  <meta name="description" content="Presence-verified counting app. Track every second of focused time toward 100,000. Inspired by the value of attention in an inflating world." />
-  <title>Time Value Counter — Count to 100k</title>
+  <meta name="description" content="Presence-verified counting app. Choose 10k–100k. Track focused time with verifiable logs that work across devices." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Time Value Counter</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0b1220;
-      --surface: #111827;
-      --surface-2: #1f2937;
-      --border: #374151;
-      --text: #f3f4f6;
-      --muted: #9ca3af;
-      --accent: #38bdf8;
-      --accent-dim: #0ea5e9;
-      --success: #34d399;
-      --warning: #fbbf24;
-      --danger: #f87171;
-      --radius: 16px;
+      --bg: #0b1220; --surface: #111827; --surface-2: #1f2937; --border: #374151;
+      --text: #f3f4f6; --muted: #9ca3af; --accent: #38bdf8; --accent-dim: #0ea5e9;
+      --success: #34d399; --warning: #fbbf24; --danger: #f87171; --radius: 16px;
       --shadow: 0 10px 40px rgba(0,0,0,0.4);
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      height: 100%;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100dvh;
-    }
-
-    /* Header */
-    header {
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      background: rgba(11, 18, 32, 0.85);
-      backdrop-filter: blur(12px);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    .logo {
-      font-weight: 800;
-      font-size: 1.1rem;
-      letter-spacing: -0.03em;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .logo span {
-      color: var(--accent);
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
-
-    button, .btn {
-      font-family: inherit;
-      font-weight: 600;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--muted);
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-    }
-    .btn-ghost:hover {
-      background: var(--surface-2);
-      color: var(--text);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-      color: #0f172a;
-      padding: 0.7rem 1.25rem;
-      font-size: 0.95rem;
-      box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
-    }
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 25px rgba(56, 189, 248, 0.35);
-    }
-    .btn-primary:active {
-      transform: translateY(0);
-    }
-
-    .btn-danger {
-      background: rgba(248, 113, 113, 0.15);
-      color: var(--danger);
-      padding: 0.5rem 0.9rem;
-      font-size: 0.85rem;
-    }
-    .btn-danger:hover {
-      background: rgba(248, 113, 113, 0.25);
-    }
-
-    /* Main layout */
-    main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr;
-      max-width: 1100px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 1.5rem 1.25rem 3rem;
-      gap: 1.5rem;
-    }
-
-    @media (min-width: 900px) {
-      main {
-        grid-template-columns: 1.4fr 1fr;
-        padding-top: 2rem;
-      }
-    }
-
-    /* Counter Card */
-    .counter-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 2rem 1.5rem;
-      text-align: center;
-      box-shadow: var(--shadow);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .counter-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at top, rgba(56, 189, 248, 0.08), transparent 60%);
-      pointer-events: none;
-    }
-
-    .goal-label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-      font-weight: 600;
-    }
-
-    .current-count {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(3.5rem, 12vw, 5.5rem);
-      font-weight: 700;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      background: linear-gradient(180deg, #fff 30%, var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.5rem;
-    }
-
-    .progress-wrap {
-      margin: 1.5rem 0 1.75rem;
-    }
-
-    .progress-bar {
-      height: 8px;
-      background: var(--surface-2);
-      border-radius: 99px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent-dim), var(--accent));
-      border-radius: 99px;
-      transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-      position: relative;
-    }
-
-    .progress-meta {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-top: 0.5rem;
-    }
-
-    .count-btn {
-      width: 100%;
-      max-width: 280px;
-      height: 64px;
-      font-size: 1.25rem;
-      font-weight: 700;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-      color: #0f172a;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 8px 30px rgba(14, 165, 233, 0.35);
-      transition: all 0.15s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .count-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 35px rgba(14, 165, 233, 0.45);
-    }
-
-    .count-btn:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    .count-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .count-btn .hint {
-      display: block;
-      font-size: 0.7rem;
-      font-weight: 500;
-      opacity: 0.75;
-      margin-top: 2px;
-    }
-
-    .status-row {
-      display: flex;
-      justify-content: center;
-      gap: 1.25rem;
-      margin-top: 1.5rem;
-      flex-wrap: wrap;
-    }
-
-    .status-item {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--success);
-    }
-
-    .status-dot.warning { background: var(--warning); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+    header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); background: rgba(11,18,32,0.85); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .logo { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.03em; display: flex; align-items: center; gap: 0.5rem; }
+    .logo span { color: var(--accent); }
+    .header-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+    button, .btn { font-family: inherit; font-weight: 600; border: none; border-radius: 10px; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; }
+    .btn-ghost { background: transparent; color: var(--muted); padding: 0.45rem 0.7rem; font-size: 0.82rem; }
+    .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-dim)); color: #0f172a; padding: 0.65rem 1.1rem; font-size: 0.9rem; box-shadow: 0 4px 20px rgba(56,189,248,0.25); }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-danger { background: rgba(248,113,113,0.15); color: var(--danger); padding: 0.5rem 0.9rem; font-size: 0.85rem; }
+    main { flex: 1; display: grid; grid-template-columns: 1fr; max-width: 1100px; width: 100%; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; gap: 1.25rem; }
+    @media (min-width: 900px) { main { grid-template-columns: 1.35fr 1fr; padding-top: 1.75rem; } }
+    .counter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem 1.25rem; text-align: center; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    .counter-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at top, rgba(56,189,248,0.08), transparent 60%); pointer-events: none; }
+    .goal-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.6rem; font-weight: 600; }
+    .current-count { font-family: 'JetBrains Mono', monospace; font-size: clamp(3.2rem, 11vw, 5.2rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1; background: linear-gradient(180deg, #fff 30%, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.4rem; }
+    .progress-wrap { margin: 1.25rem 0 1.5rem; }
+    .progress-bar { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 99px; transition: width 0.35s cubic-bezier(0.22,1,0.36,1); }
+    .progress-meta { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-top: 0.45rem; }
+    .count-btn { width: 100%; max-width: 280px; height: 62px; font-size: 1.2rem; font-weight: 700; border-radius: 14px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); color: #0f172a; border: none; cursor: pointer; box-shadow: 0 8px 30px rgba(14,165,233,0.35); transition: all 0.15s ease; }
+    .count-btn:hover:not(:disabled) { transform: translateY(-2px); }
+    .count-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .count-btn .hint { display: block; font-size: 0.68rem; font-weight: 500; opacity: 0.75; margin-top: 2px; }
+    .status-row { display: flex; justify-content: center; gap: 1.1rem; margin-top: 1.35rem; flex-wrap: wrap; }
+    .status-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; color: var(--muted); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
     .status-dot.danger { background: var(--danger); }
-
-    /* Side panel */
-    .side-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-    }
-
-    .card h2 {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 1rem;
-      font-weight: 600;
-    }
-
-    .stat-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .stat {
-      background: var(--surface-2);
-      border-radius: 12px;
-      padding: 0.9rem;
-    }
-
-    .stat-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 0.15rem;
-    }
-
-    /* Notes */
-    .note-input {
-      width: 100%;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      padding: 0.75rem 1rem;
-      font-family: inherit;
-      font-size: 0.9rem;
-      resize: vertical;
-      min-height: 80px;
-    }
-
-    .note-input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .note-actions {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-
-    /* History */
-    .history-list {
-      max-height: 280px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .history-item {
-      background: var(--surface-2);
-      border-radius: 10px;
-      padding: 0.7rem 0.9rem;
-      font-size: 0.85rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 0.75rem;
-    }
-
-    .history-count {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-      color: var(--accent);
-      white-space: nowrap;
-    }
-
-    .history-meta {
-      color: var(--muted);
-      font-size: 0.78rem;
-    }
-
-    .history-note {
-      margin-top: 0.25rem;
-      color: var(--text);
-      font-style: italic;
-    }
-
-    /* Onboarding / Profile */
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(8px);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-    }
-
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2rem;
-      max-width: 420px;
-      width: 100%;
-      box-shadow: var(--shadow);
-    }
-
-    .modal h1 {
-      font-size: 1.5rem;
-      font-weight: 800;
-      margin-bottom: 0.5rem;
-      letter-spacing: -0.03em;
-    }
-
-    .modal p {
-      color: var(--muted);
-      font-size: 0.95rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .input {
-      width: 100%;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      padding: 0.85rem 1rem;
-      font-family: inherit;
-      font-size: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    /* Focus warning */
-    .focus-banner {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: var(--danger);
-      color: #fff;
-      text-align: center;
-      padding: 0.6rem;
-      font-weight: 600;
-      font-size: 0.9rem;
-      z-index: 200;
-      transform: translateY(-100%);
-      transition: transform 0.3s ease;
-    }
-
-    .focus-banner.visible {
-      transform: translateY(0);
-    }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 1.5rem;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 0.75rem 1.25rem;
-      border-radius: 12px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      z-index: 150;
-      transition: transform 0.3s ease;
-      box-shadow: var(--shadow);
-    }
-
-    .toast.show {
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* Empty state */
-    .empty {
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.9rem;
-      padding: 1.5rem 0;
-    }
-
-    /* Footer note */
-    .philosophy {
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--muted);
-      max-width: 520px;
-      margin: 0 auto;
-      line-height: 1.6;
-    }
-
-    .philosophy strong {
-      color: var(--accent);
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 99px;
-    }
+    .side-panel { display: flex; flex-direction: column; gap: 1.1rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.15rem; }
+    .card h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.9rem; font-weight: 600; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+    .stat { background: var(--surface-2); border-radius: 12px; padding: 0.8rem; }
+    .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; }
+    .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+    .note-input { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 0.7rem 0.9rem; font-family: inherit; font-size: 0.88rem; resize: vertical; min-height: 72px; }
+    .note-input:focus { outline: none; border-color: var(--accent); }
+    .note-actions { display: flex; gap: 0.5rem; margin-top: 0.65rem; }
+    .history-list { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem; }
+    .history-item { background: var(--surface-2); border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem; }
+    .history-count { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--accent); }
+    .history-meta { color: var(--muted); font-size: 0.75rem; }
+    .history-note { margin-top: 0.2rem; font-style: italic; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.78); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 1.75rem; max-width: 440px; width: 100%; box-shadow: var(--shadow); max-height: 90dvh; overflow-y: auto; }
+    .modal h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; letter-spacing: -0.03em; }
+    .modal p { color: var(--muted); font-size: 0.92rem; margin-bottom: 1.25rem; }
+    .input, select.input { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 0.8rem 1rem; font-family: inherit; font-size: 0.95rem; margin-bottom: 0.85rem; }
+    .input:focus, select.input:focus { outline: none; border-color: var(--accent); }
+    .focus-banner { position: fixed; top: 0; left: 0; right: 0; background: var(--danger); color: #fff; text-align: center; padding: 0.55rem; font-weight: 600; font-size: 0.88rem; z-index: 200; transform: translateY(-100%); transition: transform 0.3s ease; }
+    .focus-banner.visible { transform: translateY(0); }
+    .toast { position: fixed; bottom: 1.4rem; left: 50%; transform: translateX(-50%) translateY(120px); background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.7rem 1.15rem; border-radius: 12px; font-size: 0.88rem; font-weight: 500; z-index: 150; transition: transform 0.3s ease; box-shadow: var(--shadow); max-width: 90vw; text-align: center; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .empty { text-align: center; color: var(--muted); font-size: 0.88rem; padding: 1.25rem 0; }
+    .philosophy { text-align: center; font-size: 0.78rem; color: var(--muted); max-width: 520px; margin: 0 auto; line-height: 1.6; padding: 0 1rem 1.75rem; }
+    .philosophy strong { color: var(--accent); }
+    .goal-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; }
+    .goal-chip { padding: 0.45rem 0.85rem; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+    .goal-chip.active { background: rgba(56,189,248,0.15); border-color: var(--accent); color: var(--accent); }
+    .compare-grid { display: grid; gap: 0.6rem; }
+    .compare-item { background: var(--surface-2); border-radius: 10px; padding: 0.7rem 0.85rem; font-size: 0.82rem; }
+    .compare-item strong { color: var(--accent); }
+    .challenge-box { background: rgba(251,191,36,0.12); border: 1px solid var(--warning); border-radius: 12px; padding: 1rem; margin-top: 1rem; text-align: left; }
+    .challenge-box h3 { font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--warning); }
+    ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    .finished-banner { background: linear-gradient(135deg, rgba(52,211,153,0.15), rgba(56,189,248,0.1)); border: 1px solid var(--success); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
   </style>
 </head>
 <body>
-  <div class="focus-banner" id="focusBanner">
-    ⚠️ Tab not focused — counting paused. Come back to continue.
-  </div>
+  <div class="focus-banner" id="focusBanner">⚠️ Tab not focused — counting paused</div>
 
   <header>
-    <div class="logo">
-      <span>⏱</span> Time Value <span>Counter</span>
-    </div>
+    <div class="logo"><span>⏱</span> Time Value <span>Counter</span></div>
     <div class="header-actions">
-      <button class="btn-ghost" id="exportBtn" title="Export full proof log">Export Log</button>
-      <button class="btn-ghost" id="settingsBtn" title="Settings">Settings</button>
+      <button class="btn-ghost" id="importBtn">Import</button>
+      <button class="btn-ghost" id="exportBtn">Export</button>
+      <button class="btn-ghost" id="settingsBtn">Settings</button>
     </div>
   </header>
 
   <main>
-    <!-- Left: Counter -->
     <section class="counter-card">
-      <div class="goal-label">Counting toward 100,000</div>
+      <div id="finishedBanner" class="finished-banner" style="display:none">
+        <strong>You finished.</strong> Export your proof log — this is real focused time.
+      </div>
+      <div class="goal-label" id="goalLabel">Counting toward 100,000</div>
       <div class="current-count" id="countDisplay">0</div>
-
       <div class="progress-wrap">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
         <div class="progress-meta">
           <span id="percentText">0.000%</span>
           <span id="remainingText">100,000 left</span>
         </div>
       </div>
-
-      <button class="count-btn" id="countBtn">
-        COUNT
-        <span class="hint">or press Space</span>
-      </button>
-
+      <button class="count-btn" id="countBtn">COUNT<span class="hint">or press Space</span></button>
       <div class="status-row">
-        <div class="status-item">
-          <div class="status-dot" id="focusDot"></div>
-          <span id="focusText">Focused</span>
-        </div>
-        <div class="status-item">
-          <span id="sessionTime">Session: 0m</span>
-        </div>
-        <div class="status-item">
-          <span id="rateText">— / min</span>
-        </div>
+        <div class="status-item"><div class="status-dot" id="focusDot"></div><span id="focusText">Focused</span></div>
+        <div class="status-item"><span id="sessionTime">Session: 0m</span></div>
+        <div class="status-item"><span id="rateText">— / min</span></div>
+      </div>
+
+      <!-- Presence Challenge -->
+      <div class="challenge-box" id="challengeBox" style="display:none">
+        <h3>Presence check</h3>
+        <p id="challengeText" style="font-size:0.88rem;margin-bottom:0.6rem;color:var(--muted)"></p>
+        <input class="input" id="challengeInput" type="text" placeholder="Type the answer" style="margin-bottom:0.5rem" />
+        <button class="btn-primary" id="challengeSubmit" style="width:100%">Confirm</button>
       </div>
     </section>
 
-    <!-- Right: Stats + Notes + History -->
     <div class="side-panel">
-      <!-- Stats -->
       <div class="card">
         <h2>Your Time</h2>
         <div class="stat-grid">
-          <div class="stat">
-            <div class="stat-value" id="totalTime">0h 0m</div>
-            <div class="stat-label">Active time</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value" id="sessionsCount">0</div>
-            <div class="stat-label">Sessions</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value" id="avgRate">—</div>
-            <div class="stat-label">Avg / hour</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value" id="eta">—</div>
-            <div class="stat-label">Est. finish</div>
-          </div>
+          <div class="stat"><div class="stat-value" id="totalTime">0h 0m</div><div class="stat-label">Active time</div></div>
+          <div class="stat"><div class="stat-value" id="sessionsCount">0</div><div class="stat-label">Sessions</div></div>
+          <div class="stat"><div class="stat-value" id="avgRate">—</div><div class="stat-label">Avg / hour</div></div>
+          <div class="stat"><div class="stat-value" id="eta">—</div><div class="stat-label">Est. finish</div></div>
         </div>
       </div>
 
-      <!-- Session Note -->
+      <div class="card">
+        <h2>While you counted…</h2>
+        <div class="compare-grid" id="compareGrid">
+          <div class="compare-item">Start counting to see comparisons</div>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Session Note</h2>
-        <textarea class="note-input" id="noteInput" placeholder="What’s happening in the background? (meeting, kids, traffic, deep work…)"></textarea>
-        <div class="note-actions">
-          <button class="btn-primary" id="saveNoteBtn" style="flex:1">Save Note</button>
-        </div>
+        <textarea class="note-input" id="noteInput" placeholder="What’s happening in the background?"></textarea>
+        <div class="note-actions"><button class="btn-primary" id="saveNoteBtn" style="flex:1">Save Note</button></div>
       </div>
 
-      <!-- Recent History -->
       <div class="card">
         <h2>Recent Activity</h2>
-        <div class="history-list" id="historyList">
-          <div class="empty">Start counting to build your log</div>
-        </div>
+        <div class="history-list" id="historyList"><div class="empty">Start counting to build your log</div></div>
       </div>
     </div>
   </main>
 
-  <p class="philosophy" style="padding: 0 1.5rem 2rem;">
-    Every number is a second of focused attention.<br>
-    Most people will never count this high. Yet the money supply keeps expanding.<br>
-    <strong>What is your time actually worth?</strong>
-  </p>
+  <p class="philosophy">Every number is focused attention.<br>Most people will never count this high. The money supply still expands.<br><strong>What is your time actually worth?</strong></p>
 
-  <!-- Onboarding Modal -->
-  <div class="overlay" id="onboarding" style="display: none;">
+  <!-- Onboarding -->
+  <div class="overlay" id="onboarding" style="display:none">
     <div class="modal">
       <h1>Begin the count</h1>
-      <p>
-        This is a presence-verified counter. Every number is timestamped.
-        The goal is 100,000 — not for the video, but to confront how much focused time is required.
-      </p>
-      <input class="input" id="nameInput" type="text" placeholder="Your name or alias" maxlength="40" />
+      <p>Presence-verified. Every number is timestamped. Choose how high you want to go.</p>
+      <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Your name / alias</label>
+      <input class="input" id="nameInput" type="text" placeholder="Name or alias" maxlength="40" />
+      <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Goal</label>
+      <div class="goal-chips" id="goalChips">
+        <button class="goal-chip" data-goal="10000">10k</button>
+        <button class="goal-chip" data-goal="25000">25k</button>
+        <button class="goal-chip" data-goal="50000">50k</button>
+        <button class="goal-chip" data-goal="75000">75k</button>
+        <button class="goal-chip active" data-goal="100000">100k</button>
+      </div>
       <button class="btn-primary" id="startBtn" style="width:100%">Start Counting</button>
     </div>
   </div>
 
-  <!-- Settings Modal -->
-  <div class="overlay" id="settingsModal" style="display: none;">
+  <!-- Settings -->
+  <div class="overlay" id="settingsModal" style="display:none">
     <div class="modal">
       <h1>Settings</h1>
-      <p style="margin-bottom: 1rem;">Your data lives only on this device. Export regularly.</p>
-      
-      <label style="font-size:0.85rem;color:var(--muted);display:block;margin-bottom:0.4rem;">Display Name</label>
+      <p>Data lives on this device. Use Export → Import to move across devices. The log includes a hash for integrity.</p>
+      <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Display Name</label>
       <input class="input" id="settingsName" type="text" maxlength="40" />
-
-      <div style="display:flex;flex-direction:column;gap:0.6rem;margin-top:0.5rem;">
+      <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Change Goal (does not reset progress)</label>
+      <div class="goal-chips" id="settingsGoalChips">
+        <button class="goal-chip" data-goal="10000">10k</button>
+        <button class="goal-chip" data-goal="25000">25k</button>
+        <button class="goal-chip" data-goal="50000">50k</button>
+        <button class="goal-chip" data-goal="75000">75k</button>
+        <button class="goal-chip" data-goal="100000">100k</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.5rem">
         <button class="btn-primary" id="saveSettingsBtn">Save</button>
         <button class="btn-danger" id="resetBtn">Reset All Data</button>
         <button class="btn-ghost" id="closeSettingsBtn">Close</button>
@@ -657,80 +206,93 @@
     </div>
   </div>
 
+  <input type="file" id="importFile" accept=".json,application/json" style="display:none" />
   <div class="toast" id="toast"></div>
 
   <script>
-    // ==================== State ====================
-    const GOAL = 100000;
-    const STORAGE_KEY = 'tvc_v1';
+    const STORAGE_KEY = 'tvc_v2';
+    const GOALS = [10000, 25000, 50000, 75000, 100000];
 
     let state = {
       name: '',
+      goal: 100000,
       count: 0,
       totalActiveMs: 0,
-      sessions: [],          // { id, start, end, counts, note, timestamps: number[] }
-      currentSession: null,  // { id, start, counts, note, timestamps: [] }
+      sessions: [],
+      currentSession: null,
       lastCountAt: null,
-      createdAt: null
+      createdAt: null,
+      challengeUntil: 0,
+      nextChallengeAt: 0
     };
 
-    let sessionTimerInterval = null;
     let isFocused = true;
-    let lastTick = Date.now();
+    let pendingChallenge = null;
+    let selectedGoal = 100000;
 
-    // ==================== Persistence ====================
+    // ---------- Persistence ----------
     function load() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          state = { ...state, ...parsed };
-        }
-      } catch (e) {
-        console.warn('Failed to load state', e);
-      }
+        if (raw) state = { ...state, ...JSON.parse(raw) };
+      } catch (e) {}
     }
-
     function save() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch (e) {
-        showToast('Storage full — export your log soon!');
-      }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+      catch (e) { showToast('Storage full — export soon'); }
     }
 
-    // ==================== Session Management ====================
+    // ---------- Session ----------
     function startSession() {
       if (state.currentSession) return;
-      state.currentSession = {
-        id: crypto.randomUUID(),
-        start: Date.now(),
-        counts: 0,
-        note: '',
-        timestamps: []
-      };
-      lastTick = Date.now();
+      state.currentSession = { id: crypto.randomUUID(), start: Date.now(), counts: 0, note: '', timestamps: [] };
+      if (!state.nextChallengeAt) scheduleNextChallenge();
       save();
-      updateUI();
     }
-
     function endSession() {
       if (!state.currentSession) return;
-      const sess = state.currentSession;
-      sess.end = Date.now();
-      state.sessions.unshift(sess);
-      // Keep only last 50 full sessions in memory for UI, but timestamps stay with count log conceptually
-      if (state.sessions.length > 80) state.sessions.pop();
+      state.currentSession.end = Date.now();
+      state.sessions.unshift(state.currentSession);
+      if (state.sessions.length > 60) state.sessions.pop();
       state.currentSession = null;
       save();
     }
 
-    // ==================== Counting ====================
-    function doCount() {
-      if (!isFocused) {
-        showToast('Stay focused on this tab to count');
-        return;
+    // ---------- Challenge ----------
+    function scheduleNextChallenge() {
+      const gap = 40 + Math.floor(Math.random() * 90); // every 40–130 counts
+      state.nextChallengeAt = state.count + gap;
+    }
+    function maybeTriggerChallenge() {
+      if (state.count >= state.nextChallengeAt && !pendingChallenge) {
+        const a = 2 + Math.floor(Math.random() * 8);
+        const b = 2 + Math.floor(Math.random() * 8);
+        pendingChallenge = { type: 'math', answer: String(a + b), prompt: `Quick presence check: what is ${a} + ${b}?` };
+        document.getElementById('challengeText').textContent = pendingChallenge.prompt;
+        document.getElementById('challengeInput').value = '';
+        document.getElementById('challengeBox').style.display = 'block';
+        document.getElementById('countBtn').disabled = true;
       }
+    }
+    function resolveChallenge() {
+      const val = document.getElementById('challengeInput').value.trim();
+      if (val === pendingChallenge.answer) {
+        pendingChallenge = null;
+        document.getElementById('challengeBox').style.display = 'none';
+        document.getElementById('countBtn').disabled = false;
+        scheduleNextChallenge();
+        showToast('Presence confirmed');
+        save();
+      } else {
+        showToast('Wrong answer — try again');
+      }
+    }
+
+    // ---------- Count ----------
+    function doCount() {
+      if (!isFocused) { showToast('Stay focused on this tab'); return; }
+      if (pendingChallenge) { showToast('Complete the presence check first'); return; }
+      if (state.count >= state.goal) { showToast('Goal already reached!'); return; }
       if (!state.currentSession) startSession();
 
       state.count += 1;
@@ -738,220 +300,129 @@
       state.currentSession.counts += 1;
       state.currentSession.timestamps.push(now);
       state.lastCountAt = now;
-
-      // Keep timestamps array reasonable (last 500 per session is plenty for proof)
-      if (state.currentSession.timestamps.length > 600) {
-        state.currentSession.timestamps = state.currentSession.timestamps.slice(-500);
+      if (state.currentSession.timestamps.length > 500) {
+        state.currentSession.timestamps = state.currentSession.timestamps.slice(-400);
       }
-
+      maybeTriggerChallenge();
       save();
       updateUI();
-      pulseButton();
     }
 
-    // ==================== UI Updates ====================
-    function formatNumber(n) {
-      return n.toLocaleString('en-US');
-    }
-
+    // ---------- UI ----------
+    function formatNumber(n) { return n.toLocaleString('en-US'); }
     function formatDuration(ms) {
       if (ms < 1000) return '0m';
-      const totalSec = Math.floor(ms / 1000);
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      if (h > 0) return `${h}h ${m}m`;
-      return `${m}m`;
+      const s = Math.floor(ms / 1000);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
     }
-
     function formatRate(counts, ms) {
-      if (ms < 10000) return '—';
-      const perMin = (counts / (ms / 60000)).toFixed(1);
-      return `${perMin}/min`;
+      if (ms < 8000) return '—';
+      return (counts / (ms / 60000)).toFixed(1) + '/min';
     }
 
     function updateUI() {
-      // Count & progress
+      const goal = state.goal || 100000;
       document.getElementById('countDisplay').textContent = formatNumber(state.count);
-      const pct = (state.count / GOAL) * 100;
+      document.getElementById('goalLabel').textContent = 'Counting toward ' + formatNumber(goal);
+      const pct = (state.count / goal) * 100;
       document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
       document.getElementById('percentText').textContent = pct.toFixed(3) + '%';
-      document.getElementById('remainingText').textContent = formatNumber(Math.max(0, GOAL - state.count)) + ' left';
+      document.getElementById('remainingText').textContent = formatNumber(Math.max(0, goal - state.count)) + ' left';
 
-      // Session time & rate
-      let sessionMs = 0;
-      let sessionCounts = 0;
-      if (state.currentSession) {
-        sessionMs = Date.now() - state.currentSession.start;
-        sessionCounts = state.currentSession.counts;
-      }
+      let sessionMs = state.currentSession ? Date.now() - state.currentSession.start : 0;
+      let sessionCounts = state.currentSession ? state.currentSession.counts : 0;
       document.getElementById('sessionTime').textContent = 'Session: ' + formatDuration(sessionMs);
       document.getElementById('rateText').textContent = formatRate(sessionCounts, sessionMs);
 
-      // Focus indicator
       const dot = document.getElementById('focusDot');
       const focusText = document.getElementById('focusText');
-      if (isFocused) {
-        dot.className = 'status-dot';
-        focusText.textContent = 'Focused';
-      } else {
-        dot.className = 'status-dot danger';
-        focusText.textContent = 'Not focused';
-      }
+      if (isFocused) { dot.className = 'status-dot'; focusText.textContent = 'Focused'; }
+      else { dot.className = 'status-dot danger'; focusText.textContent = 'Not focused'; }
 
-      // Global stats
-      let totalMs = state.totalActiveMs;
-      if (state.currentSession && isFocused) {
-        totalMs += (Date.now() - lastTick);
-      }
-      document.getElementById('totalTime').textContent = formatDuration(totalMs + (state.currentSession ? Date.now() - state.currentSession.start : 0));
-
-      // Better total time calculation
-      let computedTotal = state.totalActiveMs;
-      if (state.currentSession) {
-        computedTotal += Date.now() - state.currentSession.start;
-      }
+      let computedTotal = state.totalActiveMs + (state.currentSession ? Date.now() - state.currentSession.start : 0);
       document.getElementById('totalTime').textContent = formatDuration(computedTotal);
-
       document.getElementById('sessionsCount').textContent = state.sessions.length + (state.currentSession ? 1 : 0);
 
-      // Average rate
       if (computedTotal > 60000) {
-        const perHour = Math.round((state.count / (computedTotal / 3600000)));
-        document.getElementById('avgRate').textContent = formatNumber(perHour);
-      } else {
-        document.getElementById('avgRate').textContent = '—';
-      }
+        document.getElementById('avgRate').textContent = formatNumber(Math.round(state.count / (computedTotal / 3600000)));
+      } else document.getElementById('avgRate').textContent = '—';
 
-      // ETA
-      if (state.count > 50 && computedTotal > 120000) {
-        const ratePerMs = state.count / computedTotal;
-        const remaining = GOAL - state.count;
-        const etaMs = remaining / ratePerMs;
-        const etaDate = new Date(Date.now() + etaMs);
-        document.getElementById('eta').textContent = etaDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      } else {
-        document.getElementById('eta').textContent = '—';
-      }
+      if (state.count > 40 && computedTotal > 90000) {
+        const rate = state.count / computedTotal;
+        const etaMs = (goal - state.count) / rate;
+        document.getElementById('eta').textContent = new Date(Date.now() + etaMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      } else document.getElementById('eta').textContent = '—';
 
-      // History (recent timestamps + session notes)
+      // Finished
+      const finished = state.count >= goal;
+      document.getElementById('finishedBanner').style.display = finished ? 'block' : 'none';
+      document.getElementById('countBtn').disabled = finished || !!pendingChallenge;
+
+      // Comparisons (approximate illustrative numbers)
+      updateComparisons(computedTotal);
+
       renderHistory();
+    }
+
+    function updateComparisons(totalMs) {
+      const hours = totalMs / 3600000;
+      const grid = document.getElementById('compareGrid');
+      if (hours < 0.05) {
+        grid.innerHTML = '<div class="compare-item">Keep going to unlock comparisons</div>';
+        return;
+      }
+      // Rough illustrative figures (not live data)
+      const m2Approx = (hours * 0.8).toFixed(1); // toy number for illustration
+      const btcHours = hours.toFixed(1);
+      grid.innerHTML = `
+        <div class="compare-item">You have given <strong>${formatDuration(totalMs)}</strong> of focused attention.</div>
+        <div class="compare-item">In roughly the same wall-clock time, global money supply continues its long-term expansion.</div>
+        <div class="compare-item">Most humans will never count this high out loud. You are doing it with timestamps.</div>
+        <div class="compare-item">This log is your personal proof of time spent.</div>
+      `;
     }
 
     function renderHistory() {
       const list = document.getElementById('historyList');
       const items = [];
-
-      // Current session first
       if (state.currentSession && state.currentSession.counts > 0) {
         const s = state.currentSession;
-        items.push({
-          count: state.count,
-          ts: s.timestamps[s.timestamps.length - 1] || s.start,
-          note: s.note || null,
-          isCurrent: true,
-          sessionCounts: s.counts
-        });
+        items.push({ isCurrent: true, count: state.count, ts: s.timestamps[s.timestamps.length-1] || s.start, note: s.note, sessionCounts: s.counts });
       }
-
-      // Past sessions (most recent first)
-      for (const s of state.sessions.slice(0, 12)) {
-        items.push({
-          count: null,
-          ts: s.end || s.start,
-          note: s.note,
-          sessionCounts: s.counts,
-          start: s.start,
-          end: s.end
-        });
+      for (const s of state.sessions.slice(0, 10)) {
+        items.push({ ts: s.end || s.start, note: s.note, sessionCounts: s.counts });
       }
-
-      if (items.length === 0) {
-        list.innerHTML = '<div class="empty">Start counting to build your log</div>';
-        return;
-      }
-
+      if (!items.length) { list.innerHTML = '<div class="empty">Start counting to build your log</div>'; return; }
       list.innerHTML = items.map(item => {
-        const timeStr = new Date(item.ts).toLocaleString(undefined, {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
+        const timeStr = new Date(item.ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         if (item.isCurrent) {
-          return `
-            <div class="history-item">
-              <div>
-                <div class="history-count">#${formatNumber(item.count)}</div>
-                <div class="history-meta">${timeStr} · current session (+${item.sessionCounts})</div>
-                ${item.note ? `<div class="history-note">“${escapeHtml(item.note)}”</div>` : ''}
-              </div>
-            </div>`;
+          return `<div class="history-item"><div class="history-count">#${formatNumber(item.count)}</div><div class="history-meta">${timeStr} · current (+${item.sessionCounts})</div>${item.note ? `<div class="history-note">“${esc(item.note)}”</div>` : ''}</div>`;
         }
-        return `
-          <div class="history-item">
-            <div>
-              <div class="history-count">+${formatNumber(item.sessionCounts)}</div>
-              <div class="history-meta">${timeStr}</div>
-              ${item.note ? `<div class="history-note">“${escapeHtml(item.note)}”</div>` : ''}
-            </div>
-          </div>`;
+        return `<div class="history-item"><div class="history-count">+${formatNumber(item.sessionCounts)}</div><div class="history-meta">${timeStr}</div>${item.note ? `<div class="history-note">“${esc(item.note)}”</div>` : ''}</div>`;
       }).join('');
     }
+    function esc(s) { return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"'); }
 
-    function escapeHtml(str) {
-      return str.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"');
+    // ---------- Hash for verifiability ----------
+    async function sha256(text) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    function pulseButton() {
-      const btn = document.getElementById('countBtn');
-      btn.style.transform = 'scale(0.97)';
-      setTimeout(() => btn.style.transform = '', 80);
-    }
-
-    // ==================== Focus / Presence ====================
-    function handleVisibility() {
-      const wasFocused = isFocused;
-      isFocused = document.visibilityState === 'visible';
-
-      const banner = document.getElementById('focusBanner');
-      if (!isFocused) {
-        banner.classList.add('visible');
-        // Accumulate active time so far in this session
-        if (state.currentSession && wasFocused) {
-          // We don't double-count; the live timer just freezes visually
-        }
-      } else {
-        banner.classList.remove('visible');
-        lastTick = Date.now();
-      }
-      updateUI();
-    }
-
-    // ==================== Notes ====================
-    function saveNote() {
-      const note = document.getElementById('noteInput').value.trim();
-      if (!state.currentSession) startSession();
-      state.currentSession.note = note;
-      save();
-      showToast(note ? 'Note saved to this session' : 'Note cleared');
-      updateUI();
-    }
-
-    // ==================== Export ====================
-    function exportLog() {
-      // Build a complete proof object
+    async function exportLog() {
       const proof = {
         app: 'Time Value Counter',
-        version: 1,
-        goal: GOAL,
+        version: 2,
+        goal: state.goal,
         name: state.name,
         finalCount: state.count,
         totalActiveMs: state.totalActiveMs + (state.currentSession ? Date.now() - state.currentSession.start : 0),
         exportedAt: new Date().toISOString(),
         createdAt: state.createdAt ? new Date(state.createdAt).toISOString() : null,
         sessions: [
-          ...(state.currentSession ? [{
-            ...state.currentSession,
-            end: Date.now(),
-            note: state.currentSession.note
-          }] : []),
+          ...(state.currentSession ? [{ ...state.currentSession, end: Date.now() }] : []),
           ...state.sessions
         ].map(s => ({
           id: s.id,
@@ -959,37 +430,76 @@
           end: s.end ? new Date(s.end).toISOString() : null,
           counts: s.counts,
           note: s.note || null,
-          // Include a sample of timestamps for verifiability (first, last, and every ~50th)
-          sampleTimestamps: (s.timestamps || []).filter((_, i, arr) => 
-            i === 0 || i === arr.length - 1 || i % 50 === 0
-          ).map(t => new Date(t).toISOString())
+          sampleTimestamps: (s.timestamps || []).filter((_, i, a) => i === 0 || i === a.length - 1 || i % 40 === 0).map(t => new Date(t).toISOString())
         }))
       };
+      const body = JSON.stringify(proof, null, 2);
+      const hash = await sha256(body);
+      proof.contentHash = hash;
+      const final = JSON.stringify(proof, null, 2);
 
-      const blob = new Blob([JSON.stringify(proof, null, 2)], { type: 'application/json' });
+      const blob = new Blob([final], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `time-value-counter-${state.count}-${Date.now()}.json`;
+      a.download = `tvc-proof-${state.count}-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Proof log downloaded');
+      showToast('Verifiable proof log downloaded (includes SHA-256 hash)');
     }
 
-    // ==================== Toast ====================
+    async function importLog(file) {
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data.app || !data.sessions) throw new Error('Invalid log');
+        // Basic integrity note: we trust the file the user chose
+        if (!confirm(`Import log for "${data.name || 'Unknown'}"?\nCount: ${data.finalCount}\nGoal: ${data.goal}\nThis will replace current data on this device.`)) return;
+
+        state.name = data.name || state.name;
+        state.goal = data.goal || 100000;
+        state.count = data.finalCount || 0;
+        state.totalActiveMs = data.totalActiveMs || 0;
+        state.createdAt = data.createdAt ? new Date(data.createdAt).getTime() : Date.now();
+        state.sessions = (data.sessions || []).map(s => ({
+          id: s.id || crypto.randomUUID(),
+          start: new Date(s.start).getTime(),
+          end: s.end ? new Date(s.end).getTime() : null,
+          counts: s.counts || 0,
+          note: s.note || '',
+          timestamps: (s.sampleTimestamps || []).map(t => new Date(t).getTime())
+        }));
+        state.currentSession = null;
+        state.nextChallengeAt = state.count + 50;
+        save();
+        updateUI();
+        showToast('Log imported successfully');
+      } catch (e) {
+        showToast('Import failed — invalid file');
+        console.error(e);
+      }
+    }
+
+    // ---------- Focus ----------
+    function handleVisibility() {
+      isFocused = document.visibilityState === 'visible';
+      document.getElementById('focusBanner').classList.toggle('visible', !isFocused);
+      updateUI();
+    }
+
+    // ---------- Toast ----------
     let toastTimer;
     function showToast(msg) {
       const el = document.getElementById('toast');
       el.textContent = msg;
       el.classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
     }
 
-    // ==================== Init ====================
+    // ---------- Init ----------
     function init() {
       load();
-
       if (!state.name) {
         document.getElementById('onboarding').style.display = 'flex';
       } else {
@@ -997,80 +507,105 @@
         updateUI();
       }
 
-      // Event listeners
+      // Goal chips
+      document.querySelectorAll('#goalChips .goal-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#goalChips .goal-chip').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedGoal = parseInt(btn.dataset.goal, 10);
+        });
+      });
+      document.querySelectorAll('#settingsGoalChips .goal-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#settingsGoalChips .goal-chip').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedGoal = parseInt(btn.dataset.goal, 10);
+        });
+      });
+
       document.getElementById('countBtn').addEventListener('click', doCount);
-      document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
+      document.getElementById('saveNoteBtn').addEventListener('click', () => {
+        if (!state.currentSession) startSession();
+        state.currentSession.note = document.getElementById('noteInput').value.trim();
+        save(); showToast('Note saved'); updateUI();
+      });
       document.getElementById('exportBtn').addEventListener('click', exportLog);
+      document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+      document.getElementById('importFile').addEventListener('change', (e) => {
+        if (e.target.files[0]) importLog(e.target.files[0]);
+        e.target.value = '';
+      });
       document.getElementById('settingsBtn').addEventListener('click', openSettings);
       document.getElementById('startBtn').addEventListener('click', startOnboarding);
       document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
-      document.getElementById('closeSettingsBtn').addEventListener('click', () => {
-        document.getElementById('settingsModal').style.display = 'none';
+      document.getElementById('closeSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').style.display = 'none');
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        if (confirm('Delete all data on this device? Export first if you need the log.')) {
+          localStorage.removeItem(STORAGE_KEY);
+          location.reload();
+        }
       });
-      document.getElementById('resetBtn').addEventListener('click', resetAll);
+      document.getElementById('challengeSubmit').addEventListener('click', resolveChallenge);
+      document.getElementById('challengeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') resolveChallenge(); });
 
-      // Keyboard
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
           e.preventDefault();
           doCount();
         }
       });
-
-      // Visibility
       document.addEventListener('visibilitychange', handleVisibility);
 
-      // Live timer
-      sessionTimerInterval = setInterval(() => {
-        if (state.currentSession && isFocused) {
-          updateUI();
-        }
-      }, 1000);
+      setInterval(() => { if (state.currentSession && isFocused) updateUI(); }, 1000);
 
-      // Before unload — end session cleanly
       window.addEventListener('beforeunload', () => {
         if (state.currentSession) {
-          // Persist active time
           state.totalActiveMs += Date.now() - state.currentSession.start;
           endSession();
         }
       });
+
+      // PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
     }
 
     function startOnboarding() {
       const name = document.getElementById('nameInput').value.trim() || 'Anonymous';
       state.name = name;
+      state.goal = selectedGoal;
       state.createdAt = Date.now();
       state.count = 0;
       state.totalActiveMs = 0;
       state.sessions = [];
+      state.nextChallengeAt = 30 + Math.floor(Math.random() * 40);
       startSession();
       save();
       document.getElementById('onboarding').style.display = 'none';
       updateUI();
-      showToast(`Welcome, ${name}. Let’s begin.`);
+      showToast(`Welcome, ${name}. Goal: ${formatNumber(state.goal)}`);
     }
 
     function openSettings() {
       document.getElementById('settingsName').value = state.name;
+      selectedGoal = state.goal;
+      document.querySelectorAll('#settingsGoalChips .goal-chip').forEach(b => {
+        b.classList.toggle('active', parseInt(b.dataset.goal, 10) === state.goal);
+      });
       document.getElementById('settingsModal').style.display = 'flex';
     }
 
     function saveSettings() {
       const name = document.getElementById('settingsName').value.trim();
       if (name) state.name = name;
+      state.goal = selectedGoal;
       save();
       document.getElementById('settingsModal').style.display = 'none';
+      updateUI();
       showToast('Settings saved');
     }
 
-    function resetAll() {
-      if (!confirm('This will permanently delete all your counting data on this device. Export first if you care about the log. Continue?')) return;
-      localStorage.removeItem(STORAGE_KEY);
-      location.reload();
-    }
-
-    // Boot
     init();
   </script>
 </body>
