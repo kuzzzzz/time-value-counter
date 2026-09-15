@@ -4,13 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
-  <meta name="description" content="Presence-verified counting. One number at a time, at human speaking pace." />
+  <meta name="description" content="Presence-verified counting with accounts, leaderboard and human speaking pace." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="manifest.json" />
   <title>Time Value Counter</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --bg: #0b1220; --surface: #111827; --surface-2: #1f2937; --border: #374151;
@@ -42,7 +43,7 @@
     .progress-bar { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 99px; transition: width 0.35s cubic-bezier(0.22,1,0.36,1); }
     .progress-meta { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-top: 0.45rem; }
-    .count-btn { width: 100%; max-width: 280px; height: 62px; font-size: 1.2rem; font-weight: 700; border-radius: 14px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); color: #0f172a; border: none; cursor: pointer; box-shadow: 0 8px 30px rgba(14,165,233,0.35); transition: all 0.15s ease; position: relative; overflow: hidden; }
+    .count-btn { width: 100%; max-width: 280px; height: 62px; font-size: 1.2rem; font-weight: 700; border-radius: 14px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); color: #0f172a; border: none; cursor: pointer; box-shadow: 0 8px 30px rgba(14,165,233,0.35); transition: all 0.15s ease; }
     .count-btn:hover:not(:disabled) { transform: translateY(-2px); }
     .count-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .count-btn .hint { display: block; font-size: 0.68rem; font-weight: 500; opacity: 0.75; margin-top: 2px; }
@@ -60,14 +61,12 @@
     .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
     .note-input { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 0.7rem 0.9rem; font-family: inherit; font-size: 0.88rem; resize: vertical; min-height: 72px; }
     .note-input:focus { outline: none; border-color: var(--accent); }
-    .note-actions { display: flex; gap: 0.5rem; margin-top: 0.65rem; }
-    .history-list { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem; }
+    .history-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem; }
     .history-item { background: var(--surface-2); border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem; }
     .history-count { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--accent); }
     .history-meta { color: var(--muted); font-size: 0.75rem; }
-    .history-note { margin-top: 0.2rem; font-style: italic; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.78); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
-    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 1.75rem; max-width: 440px; width: 100%; box-shadow: var(--shadow); max-height: 90dvh; overflow-y: auto; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 1.75rem; max-width: 420px; width: 100%; box-shadow: var(--shadow); max-height: 90dvh; overflow-y: auto; }
     .modal h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; letter-spacing: -0.03em; }
     .modal p { color: var(--muted); font-size: 0.92rem; margin-bottom: 1.25rem; }
     .input { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 0.8rem 1rem; font-family: inherit; font-size: 0.95rem; margin-bottom: 0.85rem; }
@@ -82,11 +81,6 @@
     .goal-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; }
     .goal-chip { padding: 0.45rem 0.85rem; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); font-size: 0.82rem; font-weight: 600; cursor: pointer; }
     .goal-chip.active { background: rgba(56,189,248,0.15); border-color: var(--accent); color: var(--accent); }
-    .compare-grid { display: grid; gap: 0.6rem; }
-    .compare-item { background: var(--surface-2); border-radius: 10px; padding: 0.7rem 0.85rem; font-size: 0.82rem; }
-    .compare-item strong { color: var(--accent); }
-    .challenge-box { background: rgba(251,191,36,0.12); border: 1px solid var(--warning); border-radius: 12px; padding: 1rem; margin-top: 1rem; text-align: left; }
-    .challenge-box h3 { font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--warning); }
     .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; font-size: 0.9rem; }
     .toggle { width: 44px; height: 24px; background: var(--surface-2); border-radius: 99px; position: relative; cursor: pointer; border: 1px solid var(--border); }
     .toggle.on { background: var(--accent); border-color: var(--accent); }
@@ -94,6 +88,13 @@
     .toggle.on::after { transform: translateX(20px); }
     .finished-banner { background: linear-gradient(135deg, rgba(52,211,153,0.15), rgba(56,189,248,0.1)); border: 1px solid var(--success); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
     .pace-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.6rem; }
+    .leaderboard-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 280px; overflow-y: auto; }
+    .lb-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); border-radius: 10px; padding: 0.6rem 0.85rem; font-size: 0.85rem; }
+    .lb-rank { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-weight: 700; min-width: 28px; }
+    .lb-name { flex: 1; margin-left: 0.5rem; }
+    .lb-count { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+    .auth-status { font-size: 0.8rem; color: var(--muted); }
+    .auth-status.logged { color: var(--success); }
   </style>
 </head>
 <body>
@@ -102,7 +103,8 @@
   <header>
     <div class="logo"><span>⏱</span> Time Value <span>Counter</span></div>
     <div class="header-actions">
-      <button class="btn-ghost" id="importBtn">Import</button>
+      <span class="auth-status" id="authStatus">Not signed in</span>
+      <button class="btn-ghost" id="authBtn">Sign in</button>
       <button class="btn-ghost" id="exportBtn">Export</button>
       <button class="btn-ghost" id="settingsBtn">Settings</button>
     </div>
@@ -129,13 +131,6 @@
         <div class="status-item"><span id="sessionTime">Session: 0m</span></div>
         <div class="status-item"><span id="rateText">— / min</span></div>
       </div>
-
-      <div class="challenge-box" id="challengeBox" style="display:none">
-        <h3>Presence check</h3>
-        <p id="challengeText" style="font-size:0.88rem;margin-bottom:0.6rem;color:var(--muted)"></p>
-        <input class="input" id="challengeInput" type="text" placeholder="Type the answer" style="margin-bottom:0.5rem" />
-        <button class="btn-primary" id="challengeSubmit" style="width:100%">Confirm</button>
-      </div>
     </section>
 
     <div class="side-panel">
@@ -150,16 +145,18 @@
       </div>
 
       <div class="card">
-        <h2>While you counted…</h2>
-        <div class="compare-grid" id="compareGrid">
-          <div class="compare-item">Start counting to see comparisons</div>
+        <h2>Leaderboard</h2>
+        <div class="leaderboard-list" id="leaderboardList">
+          <div class="empty">Loading…</div>
         </div>
       </div>
 
       <div class="card">
         <h2>Session Note</h2>
         <textarea class="note-input" id="noteInput" placeholder="What’s happening in the background?"></textarea>
-        <div class="note-actions"><button class="btn-primary" id="saveNoteBtn" style="flex:1">Save Note</button></div>
+        <div style="margin-top:0.65rem">
+          <button class="btn-primary" id="saveNoteBtn" style="width:100%">Save Note</button>
+        </div>
       </div>
 
       <div class="card">
@@ -171,11 +168,26 @@
 
   <p class="philosophy">Every number is focused attention.<br>Most people will never count this high. The money supply still expands.<br><strong>What is your time actually worth?</strong></p>
 
-  <!-- Onboarding -->
+  <!-- Auth Modal -->
+  <div class="overlay" id="authModal" style="display:none">
+    <div class="modal">
+      <h1 id="authTitle">Sign in</h1>
+      <p id="authDesc">Create an account so your count follows you across devices.</p>
+      <input class="input" id="authEmail" type="email" placeholder="Email" />
+      <input class="input" id="authPassword" type="password" placeholder="Password (min 6 characters)" />
+      <div style="display:flex;flex-direction:column;gap:0.5rem">
+        <button class="btn-primary" id="authSubmitBtn" style="width:100%">Sign in</button>
+        <button class="btn-ghost" id="authToggleMode" style="width:100%">Need an account? Sign up</button>
+        <button class="btn-ghost" id="authCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onboarding (local only fallback) -->
   <div class="overlay" id="onboarding" style="display:none">
     <div class="modal">
       <h1>Begin the count</h1>
-      <p>One number at a time, at human speaking pace. Every count is timestamped.</p>
+      <p>One number at a time. Sign in later to sync across devices.</p>
       <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Your name / alias</label>
       <input class="input" id="nameInput" type="text" placeholder="Name or alias" maxlength="40" />
       <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Goal</label>
@@ -194,16 +206,13 @@
   <div class="overlay" id="settingsModal" style="display:none">
     <div class="modal">
       <h1>Settings</h1>
-      <p>Data stays on this device. Export → Import to move across devices.</p>
-
       <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Display Name</label>
       <input class="input" id="settingsName" type="text" maxlength="40" />
-
       <div class="toggle-row">
         <span>Speak each number (Voice)</span>
         <div class="toggle" id="voiceToggle"></div>
       </div>
-
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.8rem">When Voice is on, the next count is locked until the number finishes speaking.</p>
       <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Change Goal</label>
       <div class="goal-chips" id="settingsGoalChips">
         <button class="goal-chip" data-goal="10000">10k</button>
@@ -212,21 +221,24 @@
         <button class="goal-chip" data-goal="75000">75k</button>
         <button class="goal-chip" data-goal="100000">100k</button>
       </div>
-
       <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.5rem">
         <button class="btn-primary" id="saveSettingsBtn">Save</button>
-        <button class="btn-danger" id="resetBtn">Reset All Data</button>
+        <button class="btn-danger" id="signOutBtn" style="display:none">Sign out</button>
+        <button class="btn-danger" id="resetBtn">Reset Local Data</button>
         <button class="btn-ghost" id="closeSettingsBtn">Close</button>
       </div>
     </div>
   </div>
 
-  <input type="file" id="importFile" accept=".json,application/json" style="display:none" />
   <div class="toast" id="toast"></div>
 
   <script>
-    const STORAGE_KEY = 'tvc_v3';
-    // Minimum time between counts (ms). Roughly the time to say a number out loud.
+    // ==================== Supabase ====================
+    const SUPABASE_URL = 'https://alyqhaqpjtkxanfiezwu.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFseXFoYXFwanRreGFuZmllend1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0ODQwNDIsImV4cCI6MjEwNTA2MDA0Mn0.FpeXb8CiJHcBKujMaG6oxqo0JbPmUIUFEL45B4RGqlk';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const STORAGE_KEY = 'tvc_v4';
     const MIN_INTERVAL_MS = 750;
 
     let state = {
@@ -242,23 +254,169 @@
       voiceEnabled: false
     };
 
+    let user = null;                 // supabase user
     let isFocused = true;
     let pendingChallenge = null;
     let selectedGoal = 100000;
-    let spaceHeld = false;          // prevents auto-repeat
-    let isCooling = false;          // button cooldown
-    let cooldownTimer = null;
+    let spaceHeld = false;
+    let isCooling = false;
+    let isSpeaking = false;          // true while speech is playing
+    let authMode = 'signin';         // 'signin' | 'signup'
+    let syncTimer = null;
 
-    // ---------- Persistence ----------
-    function load() {
+    // ---------- Persistence (local fallback) ----------
+    function loadLocal() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) state = { ...state, ...JSON.parse(raw) };
       } catch (e) {}
     }
-    function save() {
+    function saveLocal() {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
       catch (e) { showToast('Storage full — export soon'); }
+    }
+
+    // ---------- Supabase sync ----------
+    async function ensureProfile() {
+      if (!user) return;
+      const { data } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+      if (!data) {
+        await supabase.from('profiles').insert({
+          id: user.id,
+          display_name: state.name || user.email?.split('@')[0] || 'Anonymous',
+          username: (state.name || user.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '_') + '_' + user.id.slice(0, 4)
+        });
+      }
+    }
+
+    async function loadFromCloud() {
+      if (!user) return;
+      const { data, error } = await supabase.from('progress').select('*').eq('user_id', user.id).maybeSingle();
+      if (error) { console.warn(error); return; }
+      if (data) {
+        // Prefer cloud if it has higher count
+        if (data.count >= state.count) {
+          state.count = data.count;
+          state.goal = data.goal;
+          state.totalActiveMs = data.total_active_ms || 0;
+          state.voiceEnabled = !!data.voice_enabled;
+          state.lastCountAt = data.last_count_at ? new Date(data.last_count_at).getTime() : null;
+        }
+        saveLocal();
+        updateUI();
+        showToast('Synced from cloud');
+      } else {
+        // First time — push local
+        await pushToCloud();
+      }
+    }
+
+    async function pushToCloud() {
+      if (!user) return;
+      await ensureProfile();
+      const payload = {
+        user_id: user.id,
+        goal: state.goal,
+        count: state.count,
+        total_active_ms: state.totalActiveMs + (state.currentSession ? Date.now() - state.currentSession.start : 0),
+        voice_enabled: state.voiceEnabled,
+        last_count_at: state.lastCountAt ? new Date(state.lastCountAt).toISOString() : null,
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await supabase.from('progress').upsert(payload, { onConflict: 'user_id' });
+      if (error) console.warn('Sync error', error);
+    }
+
+    function scheduleSync() {
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => pushToCloud(), 2500); // debounce
+    }
+
+    async function loadLeaderboard() {
+      const { data, error } = await supabase.from('leaderboard').select('*').limit(20);
+      const list = document.getElementById('leaderboardList');
+      if (error || !data || data.length === 0) {
+        list.innerHTML = '<div class="empty">No one on the board yet. Be the first.</div>';
+        return;
+      }
+      list.innerHTML = data.map((row, i) => `
+        <div class="lb-row">
+          <span class="lb-rank">#${i + 1}</span>
+          <span class="lb-name">${esc(row.display_name || row.username || 'Anonymous')}</span>
+          <span class="lb-count">${formatNumber(row.count)}</span>
+        </div>
+      `).join('');
+    }
+
+    // ---------- Auth ----------
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user || null;
+      updateAuthUI();
+      if (user) {
+        await loadFromCloud();
+        document.getElementById('signOutBtn').style.display = 'block';
+      }
+      loadLeaderboard();
+    }
+
+    function updateAuthUI() {
+      const status = document.getElementById('authStatus');
+      const btn = document.getElementById('authBtn');
+      if (user) {
+        status.textContent = user.email || 'Signed in';
+        status.classList.add('logged');
+        btn.textContent = 'Account';
+      } else {
+        status.textContent = 'Not signed in';
+        status.classList.remove('logged');
+        btn.textContent = 'Sign in';
+      }
+    }
+
+    async function handleAuth() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if (!email || password.length < 6) {
+        showToast('Email + password (min 6 chars) required');
+        return;
+      }
+      const btn = document.getElementById('authSubmitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Please wait…';
+
+      try {
+        if (authMode === 'signin') {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          user = data.user;
+          showToast('Signed in');
+        } else {
+          const { data, error } = await supabase.auth.signUp({ email, password });
+          if (error) throw error;
+          user = data.user;
+          showToast('Account created — you are signed in');
+        }
+        document.getElementById('authModal').style.display = 'none';
+        updateAuthUI();
+        document.getElementById('signOutBtn').style.display = 'block';
+        await loadFromCloud();
+        loadLeaderboard();
+      } catch (err) {
+        showToast(err.message || 'Auth failed');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = authMode === 'signin' ? 'Sign in' : 'Sign up';
+      }
+    }
+
+    async function signOut() {
+      await supabase.auth.signOut();
+      user = null;
+      updateAuthUI();
+      document.getElementById('signOutBtn').style.display = 'none';
+      document.getElementById('settingsModal').style.display = 'none';
+      showToast('Signed out');
     }
 
     // ---------- Session ----------
@@ -266,7 +424,7 @@
       if (state.currentSession) return;
       state.currentSession = { id: crypto.randomUUID(), start: Date.now(), counts: 0, note: '', timestamps: [] };
       if (!state.nextChallengeAt) scheduleNextChallenge();
-      save();
+      saveLocal();
     }
     function endSession() {
       if (!state.currentSession) return;
@@ -274,89 +432,65 @@
       state.sessions.unshift(state.currentSession);
       if (state.sessions.length > 60) state.sessions.pop();
       state.currentSession = null;
-      save();
+      saveLocal();
+      scheduleSync();
     }
 
-    // ---------- Voice (speak the number) ----------
+    // ---------- Voice (wait until finished) ----------
     function speakNumber(n) {
-      if (!state.voiceEnabled || !window.speechSynthesis) return;
-      // Cancel any previous utterance so we don't queue
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(String(n));
-      u.rate = 1.05;
-      u.pitch = 1;
-      u.volume = 0.9;
-      // Prefer a clear English voice if available
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Daniel')));
-      if (preferred) u.voice = preferred;
-      window.speechSynthesis.speak(u);
+      return new Promise((resolve) => {
+        if (!state.voiceEnabled || !window.speechSynthesis) {
+          resolve();
+          return;
+        }
+        window.speechSynthesis.cancel();
+        isSpeaking = true;
+        const u = new SpeechSynthesisUtterance(String(n));
+        u.rate = 1.05;
+        u.pitch = 1;
+        u.volume = 0.9;
+        const voices = window.speechSynthesis.getVoices();
+        const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Daniel')));
+        if (preferred) u.voice = preferred;
+        u.onend = () => { isSpeaking = false; resolve(); };
+        u.onerror = () => { isSpeaking = false; resolve(); };
+        window.speechSynthesis.speak(u);
+      });
     }
 
     // ---------- Challenge ----------
     function scheduleNextChallenge() {
-      const gap = 45 + Math.floor(Math.random() * 90);
-      state.nextChallengeAt = state.count + gap;
-    }
-    function maybeTriggerChallenge() {
-      if (state.count >= state.nextChallengeAt && !pendingChallenge) {
-        const a = 2 + Math.floor(Math.random() * 9);
-        const b = 2 + Math.floor(Math.random() * 9);
-        pendingChallenge = { answer: String(a + b), prompt: `Presence check: what is ${a} + ${b}?` };
-        document.getElementById('challengeText').textContent = pendingChallenge.prompt;
-        document.getElementById('challengeInput').value = '';
-        document.getElementById('challengeBox').style.display = 'block';
-        setButtonCooling(true);
-      }
-    }
-    function resolveChallenge() {
-      const val = document.getElementById('challengeInput').value.trim();
-      if (val === pendingChallenge.answer) {
-        pendingChallenge = null;
-        document.getElementById('challengeBox').style.display = 'none';
-        setButtonCooling(false);
-        scheduleNextChallenge();
-        showToast('Presence confirmed');
-        save();
-      } else {
-        showToast('Wrong answer — try again');
-      }
+      state.nextChallengeAt = state.count + 45 + Math.floor(Math.random() * 90);
     }
 
-    // ---------- Core count with human pace ----------
+    // ---------- Core count ----------
     function canCount() {
       if (!isFocused) return false;
-      if (pendingChallenge) return false;
+      if (isCooling || isSpeaking) return false;
       if (state.count >= state.goal) return false;
-      if (isCooling) return false;
-      if (state.lastCountAt && (Date.now() - state.lastCountAt) < MIN_INTERVAL_MS) return false;
+      if (!state.voiceEnabled && state.lastCountAt && (Date.now() - state.lastCountAt) < MIN_INTERVAL_MS) return false;
       return true;
     }
 
-    function setButtonCooling(on) {
+    function setButtonCooling(on, hint = 'wait…') {
       isCooling = on;
       const btn = document.getElementById('countBtn');
       if (on) {
         btn.classList.add('cooling');
         btn.disabled = true;
-        document.getElementById('countHint').textContent = 'wait…';
+        document.getElementById('countHint').textContent = hint;
       } else {
         btn.classList.remove('cooling');
-        btn.disabled = state.count >= state.goal || !!pendingChallenge;
+        btn.disabled = state.count >= state.goal;
         document.getElementById('countHint').textContent = 'or press Space';
       }
     }
 
-    function doCount() {
+    async function doCount() {
       if (!canCount()) {
         if (!isFocused) showToast('Stay focused on this tab');
-        else if (pendingChallenge) showToast('Complete the presence check first');
-        else if (isCooling || (state.lastCountAt && Date.now() - state.lastCountAt < MIN_INTERVAL_MS)) {
-          // silent — just enforce the pace
-        }
         return;
       }
-
       if (!state.currentSession) startSession();
 
       state.count += 1;
@@ -364,32 +498,35 @@
       state.currentSession.counts += 1;
       state.currentSession.timestamps.push(now);
       state.lastCountAt = now;
-
       if (state.currentSession.timestamps.length > 500) {
         state.currentSession.timestamps = state.currentSession.timestamps.slice(-400);
       }
-
-      // Speak the number if voice is on
-      speakNumber(state.count);
 
       // Visual pulse
       const display = document.getElementById('countDisplay');
       display.classList.add('pulse');
       setTimeout(() => display.classList.remove('pulse'), 120);
 
-      // Enforce cooldown so you can't spam
-      setButtonCooling(true);
-      clearTimeout(cooldownTimer);
-      cooldownTimer = setTimeout(() => {
-        setButtonCooling(false);
-      }, MIN_INTERVAL_MS);
+      // Lock the button
+      setButtonCooling(true, state.voiceEnabled ? 'speaking…' : 'wait…');
 
-      maybeTriggerChallenge();
-      save();
+      // Speak and WAIT until finished when voice is on
+      await speakNumber(state.count);
+
+      // After speech (or immediately if voice off), enforce remaining cooldown
+      if (state.voiceEnabled) {
+        // Speech already provided natural pacing — small extra buffer
+        setTimeout(() => setButtonCooling(false), 120);
+      } else {
+        setTimeout(() => setButtonCooling(false), MIN_INTERVAL_MS);
+      }
+
+      saveLocal();
+      scheduleSync();
       updateUI();
     }
 
-    // ---------- UI ----------
+    // ---------- UI helpers ----------
     function formatNumber(n) { return n.toLocaleString('en-US'); }
     function formatDuration(ms) {
       if (ms < 1000) return '0m';
@@ -402,6 +539,7 @@
       if (ms < 8000) return '—';
       return (counts / (ms / 60000)).toFixed(1) + '/min';
     }
+    function esc(s) { return String(s).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"'); }
 
     function updateUI() {
       const goal = state.goal || 100000;
@@ -436,25 +574,8 @@
         document.getElementById('eta').textContent = new Date(Date.now() + etaMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       } else document.getElementById('eta').textContent = '—';
 
-      const finished = state.count >= goal;
-      document.getElementById('finishedBanner').style.display = finished ? 'block' : 'none';
-      if (finished) setButtonCooling(true);
-
-      updateComparisons(computedTotal);
+      document.getElementById('finishedBanner').style.display = state.count >= goal ? 'block' : 'none';
       renderHistory();
-    }
-
-    function updateComparisons(totalMs) {
-      const grid = document.getElementById('compareGrid');
-      if (totalMs < 30000) {
-        grid.innerHTML = '<div class="compare-item">Keep going to unlock comparisons</div>';
-        return;
-      }
-      grid.innerHTML = `
-        <div class="compare-item">You have given <strong>${formatDuration(totalMs)}</strong> of focused attention.</div>
-        <div class="compare-item">Most humans will never count this high out loud. You are doing it with timestamps.</div>
-        <div class="compare-item">This log is your personal proof of time spent.</div>
-      `;
     }
 
     function renderHistory() {
@@ -464,7 +585,7 @@
         const s = state.currentSession;
         items.push({ isCurrent: true, count: state.count, ts: s.timestamps[s.timestamps.length-1] || s.start, note: s.note, sessionCounts: s.counts });
       }
-      for (const s of state.sessions.slice(0, 10)) {
+      for (const s of state.sessions.slice(0, 8)) {
         items.push({ ts: s.end || s.start, note: s.note, sessionCounts: s.counts });
       }
       if (!items.length) { list.innerHTML = '<div class="empty">Start counting to build your log</div>'; return; }
@@ -476,106 +597,44 @@
         return `<div class="history-item"><div class="history-count">+${formatNumber(item.sessionCounts)}</div><div class="history-meta">${timeStr}</div>${item.note ? `<div class="history-note">“${esc(item.note)}”</div>` : ''}</div>`;
       }).join('');
     }
-    function esc(s) { return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"'); }
 
-    // ---------- Export / Import ----------
-    async function sha256(text) {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
+    // ---------- Export ----------
     async function exportLog() {
       const proof = {
-        app: 'Time Value Counter',
-        version: 3,
-        goal: state.goal,
-        name: state.name,
+        app: 'Time Value Counter', version: 4, goal: state.goal, name: state.name,
         finalCount: state.count,
         totalActiveMs: state.totalActiveMs + (state.currentSession ? Date.now() - state.currentSession.start : 0),
         exportedAt: new Date().toISOString(),
-        createdAt: state.createdAt ? new Date(state.createdAt).toISOString() : null,
-        voiceEnabled: state.voiceEnabled,
-        sessions: [
-          ...(state.currentSession ? [{ ...state.currentSession, end: Date.now() }] : []),
-          ...state.sessions
-        ].map(s => ({
-          id: s.id,
-          start: new Date(s.start).toISOString(),
-          end: s.end ? new Date(s.end).toISOString() : null,
-          counts: s.counts,
-          note: s.note || null,
-          sampleTimestamps: (s.timestamps || []).filter((_, i, a) => i === 0 || i === a.length - 1 || i % 40 === 0).map(t => new Date(t).toISOString())
-        }))
+        userId: user?.id || null
       };
-      const body = JSON.stringify(proof, null, 2);
-      const hash = await sha256(body);
-      proof.contentHash = hash;
-      const final = JSON.stringify(proof, null, 2);
-
-      const blob = new Blob([final], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(proof, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `tvc-proof-${state.count}-${Date.now()}.json`;
-      a.click();
+      a.href = url; a.download = `tvc-proof-${state.count}-${Date.now()}.json`; a.click();
       URL.revokeObjectURL(url);
-      showToast('Verifiable proof log downloaded');
+      showToast('Proof log downloaded');
     }
 
-    async function importLog(file) {
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        if (!data.app || !data.sessions) throw new Error('Invalid log');
-        if (!confirm(`Import log for "${data.name || 'Unknown'}"?\nCount: ${data.finalCount}\nGoal: ${data.goal}\nThis replaces current data on this device.`)) return;
-
-        state.name = data.name || state.name;
-        state.goal = data.goal || 100000;
-        state.count = data.finalCount || 0;
-        state.totalActiveMs = data.totalActiveMs || 0;
-        state.createdAt = data.createdAt ? new Date(data.createdAt).getTime() : Date.now();
-        state.voiceEnabled = !!data.voiceEnabled;
-        state.sessions = (data.sessions || []).map(s => ({
-          id: s.id || crypto.randomUUID(),
-          start: new Date(s.start).getTime(),
-          end: s.end ? new Date(s.end).getTime() : null,
-          counts: s.counts || 0,
-          note: s.note || '',
-          timestamps: (s.sampleTimestamps || []).map(t => new Date(t).getTime())
-        }));
-        state.currentSession = null;
-        state.nextChallengeAt = state.count + 50;
-        state.lastCountAt = null;
-        save();
-        updateUI();
-        showToast('Log imported successfully');
-      } catch (e) {
-        showToast('Import failed — invalid file');
-        console.error(e);
-      }
+    // ---------- Toast & Focus ----------
+    let toastTimer;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg; el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
     }
-
-    // ---------- Focus ----------
     function handleVisibility() {
       isFocused = document.visibilityState === 'visible';
       document.getElementById('focusBanner').classList.toggle('visible', !isFocused);
       updateUI();
     }
 
-    // ---------- Toast ----------
-    let toastTimer;
-    function showToast(msg) {
-      const el = document.getElementById('toast');
-      el.textContent = msg;
-      el.classList.add('show');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
-    }
-
     // ---------- Init ----------
     function init() {
-      load();
-      if (!state.name) {
+      loadLocal();
+      checkSession();
+
+      if (!state.name && !user) {
         document.getElementById('onboarding').style.display = 'flex';
       } else {
         if (!state.currentSession) startSession();
@@ -583,16 +642,10 @@
       }
 
       // Goal chips
-      document.querySelectorAll('#goalChips .goal-chip').forEach(btn => {
+      document.querySelectorAll('#goalChips .goal-chip, #settingsGoalChips .goal-chip').forEach(btn => {
         btn.addEventListener('click', () => {
-          document.querySelectorAll('#goalChips .goal-chip').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          selectedGoal = parseInt(btn.dataset.goal, 10);
-        });
-      });
-      document.querySelectorAll('#settingsGoalChips .goal-chip').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('#settingsGoalChips .goal-chip').forEach(b => b.classList.remove('active'));
+          const parent = btn.parentElement;
+          parent.querySelectorAll('.goal-chip').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           selectedGoal = parseInt(btn.dataset.goal, 10);
         });
@@ -602,64 +655,68 @@
       document.getElementById('saveNoteBtn').addEventListener('click', () => {
         if (!state.currentSession) startSession();
         state.currentSession.note = document.getElementById('noteInput').value.trim();
-        save(); showToast('Note saved'); updateUI();
+        saveLocal(); showToast('Note saved'); updateUI();
       });
       document.getElementById('exportBtn').addEventListener('click', exportLog);
-      document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
-      document.getElementById('importFile').addEventListener('change', (e) => {
-        if (e.target.files[0]) importLog(e.target.files[0]);
-        e.target.value = '';
-      });
       document.getElementById('settingsBtn').addEventListener('click', openSettings);
       document.getElementById('startBtn').addEventListener('click', startOnboarding);
       document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
       document.getElementById('closeSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').style.display = 'none');
       document.getElementById('resetBtn').addEventListener('click', () => {
-        if (confirm('Delete all data on this device? Export first if you need the log.')) {
+        if (confirm('Delete local data on this device?')) {
           localStorage.removeItem(STORAGE_KEY);
           location.reload();
         }
       });
-      document.getElementById('challengeSubmit').addEventListener('click', resolveChallenge);
-      document.getElementById('challengeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') resolveChallenge(); });
+      document.getElementById('signOutBtn').addEventListener('click', signOut);
 
-      // Spacebar: one count per full press (ignore auto-repeat)
+      // Auth UI
+      document.getElementById('authBtn').addEventListener('click', () => {
+        document.getElementById('authModal').style.display = 'flex';
+      });
+      document.getElementById('authCloseBtn').addEventListener('click', () => {
+        document.getElementById('authModal').style.display = 'none';
+      });
+      document.getElementById('authSubmitBtn').addEventListener('click', handleAuth);
+      document.getElementById('authToggleMode').addEventListener('click', () => {
+        authMode = authMode === 'signin' ? 'signup' : 'signin';
+        document.getElementById('authTitle').textContent = authMode === 'signin' ? 'Sign in' : 'Create account';
+        document.getElementById('authSubmitBtn').textContent = authMode === 'signin' ? 'Sign in' : 'Sign up';
+        document.getElementById('authToggleMode').textContent = authMode === 'signin' ? 'Need an account? Sign up' : 'Already have an account? Sign in';
+      });
+
+      // Spacebar one-shot
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
           e.preventDefault();
-          if (spaceHeld) return; // already held / auto-repeat
+          if (spaceHeld) return;
           spaceHeld = true;
           doCount();
         }
       });
-      document.addEventListener('keyup', (e) => {
-        if (e.code === 'Space') spaceHeld = false;
-      });
+      document.addEventListener('keyup', (e) => { if (e.code === 'Space') spaceHeld = false; });
 
       // Voice toggle
-      const voiceToggle = document.getElementById('voiceToggle');
-      voiceToggle.addEventListener('click', () => {
+      document.getElementById('voiceToggle').addEventListener('click', () => {
         state.voiceEnabled = !state.voiceEnabled;
-        voiceToggle.classList.toggle('on', state.voiceEnabled);
-        if (state.voiceEnabled) showToast('Voice on — numbers will be spoken');
-        else showToast('Voice off');
+        document.getElementById('voiceToggle').classList.toggle('on', state.voiceEnabled);
+        showToast(state.voiceEnabled ? 'Voice on — must finish speaking before next count' : 'Voice off');
+        saveLocal(); scheduleSync();
       });
 
       document.addEventListener('visibilitychange', handleVisibility);
       setInterval(() => { if (state.currentSession && isFocused) updateUI(); }, 1000);
+      setInterval(loadLeaderboard, 60000); // refresh leaderboard every minute
 
       window.addEventListener('beforeunload', () => {
         if (state.currentSession) {
           state.totalActiveMs += Date.now() - state.currentSession.start;
           endSession();
+          if (user) pushToCloud();
         }
       });
 
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      }
-
-      // Load voices for speech synthesis
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
       if (window.speechSynthesis) {
         window.speechSynthesis.getVoices();
         window.speechSynthesis.onvoiceschanged = () => {};
@@ -677,10 +734,10 @@
       state.nextChallengeAt = 35 + Math.floor(Math.random() * 40);
       state.lastCountAt = null;
       startSession();
-      save();
+      saveLocal();
       document.getElementById('onboarding').style.display = 'none';
       updateUI();
-      showToast(`Welcome, ${name}. Goal: ${formatNumber(state.goal)}`);
+      showToast(`Welcome, ${name}`);
     }
 
     function openSettings() {
@@ -697,7 +754,8 @@
       const name = document.getElementById('settingsName').value.trim();
       if (name) state.name = name;
       state.goal = selectedGoal;
-      save();
+      saveLocal();
+      scheduleSync();
       document.getElementById('settingsModal').style.display = 'none';
       updateUI();
       showToast('Settings saved');
