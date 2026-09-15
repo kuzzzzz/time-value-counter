@@ -241,12 +241,13 @@
     const SUPABASE_URL = 'https://alyqhaqpjtkxanfiezwu.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFseXFoYXFwanRreGFuZmllend1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0ODQwNDIsImV4cCI6MjEwNTA2MDA0Mn0.FpeXb8CiJHcBKujMaG6oxqo0JbPmUIUFEL45B4RGqlk';
     const STORAGE_KEY = 'tvc_v4';
-    const OLD_KEYS = ['tvc_v1', 'tvc_v2', 'tvc_v3']; // clean these on demand
+    const OLD_KEYS = ['tvc_v1', 'tvc_v2', 'tvc_v3'];
     const MIN_INTERVAL_MS = 750;
 
-    let supabase = null;
+    // IMPORTANT: use a different name than the global `supabase` from the CDN
+    let sb = null;
     try {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } catch (e) {
       console.error('Supabase init failed', e);
     }
@@ -306,14 +307,14 @@
       showToast('Local data cleared');
     }
 
-    // ---------- Supabase helpers (never block UI) ----------
+    // ---------- Supabase helpers ----------
     async function ensureProfile() {
-      if (!user || !supabase) return;
+      if (!user || !sb) return;
       try {
-        const { data } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+        const { data } = await sb.from('profiles').select('id').eq('id', user.id).maybeSingle();
         if (!data) {
           const name = state.name || user.email?.split('@')[0] || 'Anonymous';
-          await supabase.from('profiles').insert({
+          await sb.from('profiles').insert({
             id: user.id,
             display_name: name,
             username: (name.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'user') + '_' + user.id.slice(0, 4)
@@ -325,12 +326,11 @@
     }
 
     async function loadFromCloud() {
-      if (!user || !supabase) return;
+      if (!user || !sb) return;
       try {
-        const { data, error } = await supabase.from('progress').select('*').eq('user_id', user.id).maybeSingle();
+        const { data, error } = await sb.from('progress').select('*').eq('user_id', user.id).maybeSingle();
         if (error) throw error;
         if (data) {
-          // Only take cloud data if it is higher or we have almost nothing local
           if (data.count > state.count || state.count === 0) {
             state.count = data.count;
             state.goal = data.goal || state.goal;
@@ -342,7 +342,6 @@
             showToast('Loaded progress from cloud');
           }
         } else {
-          // First time for this account → push current local
           await pushToCloud();
         }
       } catch (e) {
@@ -352,7 +351,7 @@
     }
 
     async function pushToCloud() {
-      if (!user || !supabase) return;
+      if (!user || !sb) return;
       try {
         await ensureProfile();
         const payload = {
@@ -364,7 +363,7 @@
           last_count_at: state.lastCountAt ? new Date(state.lastCountAt).toISOString() : null,
           updated_at: new Date().toISOString()
         };
-        const { error } = await supabase.from('progress').upsert(payload, { onConflict: 'user_id' });
+        const { error } = await sb.from('progress').upsert(payload, { onConflict: 'user_id' });
         if (error) throw error;
       } catch (e) {
         console.warn('pushToCloud', e);
@@ -379,12 +378,12 @@
 
     async function loadLeaderboard() {
       const list = document.getElementById('leaderboardList');
-      if (!supabase) {
+      if (!sb) {
         list.innerHTML = '<div class="empty">Leaderboard unavailable</div>';
         return;
       }
       try {
-        const { data, error } = await supabase.from('leaderboard').select('*').limit(20);
+        const { data, error } = await sb.from('leaderboard').select('*').limit(20);
         if (error) throw error;
         if (!data || data.length === 0) {
           list.innerHTML = '<div class="empty">No one on the board yet. Be the first.</div>';
@@ -403,16 +402,15 @@
       }
     }
 
-    // ---------- Auth (non-blocking) ----------
+    // ---------- Auth ----------
     async function checkSession() {
-      if (!supabase) return;
+      if (!sb) return;
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await sb.auth.getSession();
         user = session?.user || null;
         updateAuthUI();
         if (user) {
           document.getElementById('signOutBtn').style.display = 'block';
-          // Load cloud in background — never block
           loadFromCloud();
         }
       } catch (e) {
@@ -436,7 +434,7 @@
     }
 
     async function handleAuth() {
-      if (authInProgress || !supabase) return;
+      if (authInProgress || !sb) return;
       const email = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
       const errEl = document.getElementById('authError');
@@ -457,9 +455,9 @@
       try {
         let result;
         if (authMode === 'signin') {
-          result = await supabase.auth.signInWithPassword({ email, password });
+          result = await sb.auth.signInWithPassword({ email, password });
         } else {
-          result = await supabase.auth.signUp({ email, password });
+          result = await sb.auth.signUp({ email, password });
         }
         if (result.error) throw result.error;
 
@@ -468,7 +466,6 @@
         updateAuthUI();
         document.getElementById('signOutBtn').style.display = 'block';
         showToast(authMode === 'signin' ? 'Signed in' : 'Account created');
-        // Load cloud data in background
         loadFromCloud().then(() => loadLeaderboard());
       } catch (err) {
         console.error(err);
@@ -482,8 +479,8 @@
     }
 
     async function signOut() {
-      if (supabase) {
-        try { await supabase.auth.signOut(); } catch (e) {}
+      if (sb) {
+        try { await sb.auth.signOut(); } catch (e) {}
       }
       user = null;
       updateAuthUI();
@@ -700,17 +697,14 @@
       loadLocal();
       updateUI();
 
-      // Show onboarding only if completely fresh
       if (!state.name && state.count === 0) {
         document.getElementById('onboarding').style.display = 'flex';
       } else if (!state.currentSession) {
         startSession();
       }
 
-      // Auth check in background — never blocks rendering
       checkSession();
 
-      // Goal chips
       document.querySelectorAll('#goalChips .goal-chip, #settingsGoalChips .goal-chip').forEach(btn => {
         btn.addEventListener('click', () => {
           btn.parentElement.querySelectorAll('.goal-chip').forEach(b => b.classList.remove('active'));
@@ -739,7 +733,6 @@
       });
       document.getElementById('signOutBtn').addEventListener('click', signOut);
 
-      // Auth
       document.getElementById('authBtn').addEventListener('click', () => {
         document.getElementById('authError').classList.remove('show');
         document.getElementById('authModal').style.display = 'flex';
@@ -759,7 +752,6 @@
         document.getElementById('authError').classList.remove('show');
       });
 
-      // Spacebar
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
           e.preventDefault();
