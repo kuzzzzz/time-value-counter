@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
-  <meta name="description" content="Presence-verified counting app. Choose 10k–100k. Track focused time with verifiable logs that work across devices." />
+  <meta name="description" content="Presence-verified counting. One number at a time, at human speaking pace." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="manifest.json" />
   <title>Time Value Counter</title>
@@ -36,15 +36,17 @@
     .counter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem 1.25rem; text-align: center; box-shadow: var(--shadow); position: relative; overflow: hidden; }
     .counter-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at top, rgba(56,189,248,0.08), transparent 60%); pointer-events: none; }
     .goal-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.6rem; font-weight: 600; }
-    .current-count { font-family: 'JetBrains Mono', monospace; font-size: clamp(3.2rem, 11vw, 5.2rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1; background: linear-gradient(180deg, #fff 30%, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.4rem; }
+    .current-count { font-family: 'JetBrains Mono', monospace; font-size: clamp(3.2rem, 11vw, 5.2rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1; background: linear-gradient(180deg, #fff 30%, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.4rem; transition: transform 0.12s ease; }
+    .current-count.pulse { transform: scale(1.04); }
     .progress-wrap { margin: 1.25rem 0 1.5rem; }
     .progress-bar { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 99px; transition: width 0.35s cubic-bezier(0.22,1,0.36,1); }
     .progress-meta { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-top: 0.45rem; }
-    .count-btn { width: 100%; max-width: 280px; height: 62px; font-size: 1.2rem; font-weight: 700; border-radius: 14px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); color: #0f172a; border: none; cursor: pointer; box-shadow: 0 8px 30px rgba(14,165,233,0.35); transition: all 0.15s ease; }
+    .count-btn { width: 100%; max-width: 280px; height: 62px; font-size: 1.2rem; font-weight: 700; border-radius: 14px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); color: #0f172a; border: none; cursor: pointer; box-shadow: 0 8px 30px rgba(14,165,233,0.35); transition: all 0.15s ease; position: relative; overflow: hidden; }
     .count-btn:hover:not(:disabled) { transform: translateY(-2px); }
-    .count-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .count-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .count-btn .hint { display: block; font-size: 0.68rem; font-weight: 500; opacity: 0.75; margin-top: 2px; }
+    .count-btn.cooling { background: linear-gradient(135deg, #64748b, #475569); }
     .status-row { display: flex; justify-content: center; gap: 1.1rem; margin-top: 1.35rem; flex-wrap: wrap; }
     .status-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; color: var(--muted); }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
@@ -68,8 +70,8 @@
     .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 1.75rem; max-width: 440px; width: 100%; box-shadow: var(--shadow); max-height: 90dvh; overflow-y: auto; }
     .modal h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; letter-spacing: -0.03em; }
     .modal p { color: var(--muted); font-size: 0.92rem; margin-bottom: 1.25rem; }
-    .input, select.input { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 0.8rem 1rem; font-family: inherit; font-size: 0.95rem; margin-bottom: 0.85rem; }
-    .input:focus, select.input:focus { outline: none; border-color: var(--accent); }
+    .input { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 0.8rem 1rem; font-family: inherit; font-size: 0.95rem; margin-bottom: 0.85rem; }
+    .input:focus { outline: none; border-color: var(--accent); }
     .focus-banner { position: fixed; top: 0; left: 0; right: 0; background: var(--danger); color: #fff; text-align: center; padding: 0.55rem; font-weight: 600; font-size: 0.88rem; z-index: 200; transform: translateY(-100%); transition: transform 0.3s ease; }
     .focus-banner.visible { transform: translateY(0); }
     .toast { position: fixed; bottom: 1.4rem; left: 50%; transform: translateX(-50%) translateY(120px); background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.7rem 1.15rem; border-radius: 12px; font-size: 0.88rem; font-weight: 500; z-index: 150; transition: transform 0.3s ease; box-shadow: var(--shadow); max-width: 90vw; text-align: center; }
@@ -85,8 +87,13 @@
     .compare-item strong { color: var(--accent); }
     .challenge-box { background: rgba(251,191,36,0.12); border: 1px solid var(--warning); border-radius: 12px; padding: 1rem; margin-top: 1rem; text-align: left; }
     .challenge-box h3 { font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--warning); }
-    ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; font-size: 0.9rem; }
+    .toggle { width: 44px; height: 24px; background: var(--surface-2); border-radius: 99px; position: relative; cursor: pointer; border: 1px solid var(--border); }
+    .toggle.on { background: var(--accent); border-color: var(--accent); }
+    .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform 0.15s ease; }
+    .toggle.on::after { transform: translateX(20px); }
     .finished-banner { background: linear-gradient(135deg, rgba(52,211,153,0.15), rgba(56,189,248,0.1)); border: 1px solid var(--success); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
+    .pace-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.6rem; }
   </style>
 </head>
 <body>
@@ -115,14 +122,14 @@
           <span id="remainingText">100,000 left</span>
         </div>
       </div>
-      <button class="count-btn" id="countBtn">COUNT<span class="hint">or press Space</span></button>
+      <button class="count-btn" id="countBtn">COUNT<span class="hint" id="countHint">or press Space</span></button>
+      <div class="pace-hint" id="paceHint">One number at a time · human speaking pace</div>
       <div class="status-row">
         <div class="status-item"><div class="status-dot" id="focusDot"></div><span id="focusText">Focused</span></div>
         <div class="status-item"><span id="sessionTime">Session: 0m</span></div>
         <div class="status-item"><span id="rateText">— / min</span></div>
       </div>
 
-      <!-- Presence Challenge -->
       <div class="challenge-box" id="challengeBox" style="display:none">
         <h3>Presence check</h3>
         <p id="challengeText" style="font-size:0.88rem;margin-bottom:0.6rem;color:var(--muted)"></p>
@@ -168,7 +175,7 @@
   <div class="overlay" id="onboarding" style="display:none">
     <div class="modal">
       <h1>Begin the count</h1>
-      <p>Presence-verified. Every number is timestamped. Choose how high you want to go.</p>
+      <p>One number at a time, at human speaking pace. Every count is timestamped.</p>
       <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Your name / alias</label>
       <input class="input" id="nameInput" type="text" placeholder="Name or alias" maxlength="40" />
       <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Goal</label>
@@ -187,10 +194,17 @@
   <div class="overlay" id="settingsModal" style="display:none">
     <div class="modal">
       <h1>Settings</h1>
-      <p>Data lives on this device. Use Export → Import to move across devices. The log includes a hash for integrity.</p>
+      <p>Data stays on this device. Export → Import to move across devices.</p>
+
       <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Display Name</label>
       <input class="input" id="settingsName" type="text" maxlength="40" />
-      <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Change Goal (does not reset progress)</label>
+
+      <div class="toggle-row">
+        <span>Speak each number (Voice)</span>
+        <div class="toggle" id="voiceToggle"></div>
+      </div>
+
+      <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:0.35rem">Change Goal</label>
       <div class="goal-chips" id="settingsGoalChips">
         <button class="goal-chip" data-goal="10000">10k</button>
         <button class="goal-chip" data-goal="25000">25k</button>
@@ -198,6 +212,7 @@
         <button class="goal-chip" data-goal="75000">75k</button>
         <button class="goal-chip" data-goal="100000">100k</button>
       </div>
+
       <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.5rem">
         <button class="btn-primary" id="saveSettingsBtn">Save</button>
         <button class="btn-danger" id="resetBtn">Reset All Data</button>
@@ -210,8 +225,9 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const STORAGE_KEY = 'tvc_v2';
-    const GOALS = [10000, 25000, 50000, 75000, 100000];
+    const STORAGE_KEY = 'tvc_v3';
+    // Minimum time between counts (ms). Roughly the time to say a number out loud.
+    const MIN_INTERVAL_MS = 750;
 
     let state = {
       name: '',
@@ -222,13 +238,16 @@
       currentSession: null,
       lastCountAt: null,
       createdAt: null,
-      challengeUntil: 0,
-      nextChallengeAt: 0
+      nextChallengeAt: 0,
+      voiceEnabled: false
     };
 
     let isFocused = true;
     let pendingChallenge = null;
     let selectedGoal = 100000;
+    let spaceHeld = false;          // prevents auto-repeat
+    let isCooling = false;          // button cooldown
+    let cooldownTimer = null;
 
     // ---------- Persistence ----------
     function load() {
@@ -258,20 +277,36 @@
       save();
     }
 
+    // ---------- Voice (speak the number) ----------
+    function speakNumber(n) {
+      if (!state.voiceEnabled || !window.speechSynthesis) return;
+      // Cancel any previous utterance so we don't queue
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(String(n));
+      u.rate = 1.05;
+      u.pitch = 1;
+      u.volume = 0.9;
+      // Prefer a clear English voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Daniel')));
+      if (preferred) u.voice = preferred;
+      window.speechSynthesis.speak(u);
+    }
+
     // ---------- Challenge ----------
     function scheduleNextChallenge() {
-      const gap = 40 + Math.floor(Math.random() * 90); // every 40–130 counts
+      const gap = 45 + Math.floor(Math.random() * 90);
       state.nextChallengeAt = state.count + gap;
     }
     function maybeTriggerChallenge() {
       if (state.count >= state.nextChallengeAt && !pendingChallenge) {
-        const a = 2 + Math.floor(Math.random() * 8);
-        const b = 2 + Math.floor(Math.random() * 8);
-        pendingChallenge = { type: 'math', answer: String(a + b), prompt: `Quick presence check: what is ${a} + ${b}?` };
+        const a = 2 + Math.floor(Math.random() * 9);
+        const b = 2 + Math.floor(Math.random() * 9);
+        pendingChallenge = { answer: String(a + b), prompt: `Presence check: what is ${a} + ${b}?` };
         document.getElementById('challengeText').textContent = pendingChallenge.prompt;
         document.getElementById('challengeInput').value = '';
         document.getElementById('challengeBox').style.display = 'block';
-        document.getElementById('countBtn').disabled = true;
+        setButtonCooling(true);
       }
     }
     function resolveChallenge() {
@@ -279,7 +314,7 @@
       if (val === pendingChallenge.answer) {
         pendingChallenge = null;
         document.getElementById('challengeBox').style.display = 'none';
-        document.getElementById('countBtn').disabled = false;
+        setButtonCooling(false);
         scheduleNextChallenge();
         showToast('Presence confirmed');
         save();
@@ -288,11 +323,40 @@
       }
     }
 
-    // ---------- Count ----------
+    // ---------- Core count with human pace ----------
+    function canCount() {
+      if (!isFocused) return false;
+      if (pendingChallenge) return false;
+      if (state.count >= state.goal) return false;
+      if (isCooling) return false;
+      if (state.lastCountAt && (Date.now() - state.lastCountAt) < MIN_INTERVAL_MS) return false;
+      return true;
+    }
+
+    function setButtonCooling(on) {
+      isCooling = on;
+      const btn = document.getElementById('countBtn');
+      if (on) {
+        btn.classList.add('cooling');
+        btn.disabled = true;
+        document.getElementById('countHint').textContent = 'wait…';
+      } else {
+        btn.classList.remove('cooling');
+        btn.disabled = state.count >= state.goal || !!pendingChallenge;
+        document.getElementById('countHint').textContent = 'or press Space';
+      }
+    }
+
     function doCount() {
-      if (!isFocused) { showToast('Stay focused on this tab'); return; }
-      if (pendingChallenge) { showToast('Complete the presence check first'); return; }
-      if (state.count >= state.goal) { showToast('Goal already reached!'); return; }
+      if (!canCount()) {
+        if (!isFocused) showToast('Stay focused on this tab');
+        else if (pendingChallenge) showToast('Complete the presence check first');
+        else if (isCooling || (state.lastCountAt && Date.now() - state.lastCountAt < MIN_INTERVAL_MS)) {
+          // silent — just enforce the pace
+        }
+        return;
+      }
+
       if (!state.currentSession) startSession();
 
       state.count += 1;
@@ -300,9 +364,26 @@
       state.currentSession.counts += 1;
       state.currentSession.timestamps.push(now);
       state.lastCountAt = now;
+
       if (state.currentSession.timestamps.length > 500) {
         state.currentSession.timestamps = state.currentSession.timestamps.slice(-400);
       }
+
+      // Speak the number if voice is on
+      speakNumber(state.count);
+
+      // Visual pulse
+      const display = document.getElementById('countDisplay');
+      display.classList.add('pulse');
+      setTimeout(() => display.classList.remove('pulse'), 120);
+
+      // Enforce cooldown so you can't spam
+      setButtonCooling(true);
+      clearTimeout(cooldownTimer);
+      cooldownTimer = setTimeout(() => {
+        setButtonCooling(false);
+      }, MIN_INTERVAL_MS);
+
       maybeTriggerChallenge();
       save();
       updateUI();
@@ -355,30 +436,22 @@
         document.getElementById('eta').textContent = new Date(Date.now() + etaMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       } else document.getElementById('eta').textContent = '—';
 
-      // Finished
       const finished = state.count >= goal;
       document.getElementById('finishedBanner').style.display = finished ? 'block' : 'none';
-      document.getElementById('countBtn').disabled = finished || !!pendingChallenge;
+      if (finished) setButtonCooling(true);
 
-      // Comparisons (approximate illustrative numbers)
       updateComparisons(computedTotal);
-
       renderHistory();
     }
 
     function updateComparisons(totalMs) {
-      const hours = totalMs / 3600000;
       const grid = document.getElementById('compareGrid');
-      if (hours < 0.05) {
+      if (totalMs < 30000) {
         grid.innerHTML = '<div class="compare-item">Keep going to unlock comparisons</div>';
         return;
       }
-      // Rough illustrative figures (not live data)
-      const m2Approx = (hours * 0.8).toFixed(1); // toy number for illustration
-      const btcHours = hours.toFixed(1);
       grid.innerHTML = `
         <div class="compare-item">You have given <strong>${formatDuration(totalMs)}</strong> of focused attention.</div>
-        <div class="compare-item">In roughly the same wall-clock time, global money supply continues its long-term expansion.</div>
         <div class="compare-item">Most humans will never count this high out loud. You are doing it with timestamps.</div>
         <div class="compare-item">This log is your personal proof of time spent.</div>
       `;
@@ -405,7 +478,7 @@
     }
     function esc(s) { return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"'); }
 
-    // ---------- Hash for verifiability ----------
+    // ---------- Export / Import ----------
     async function sha256(text) {
       const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
       return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -414,13 +487,14 @@
     async function exportLog() {
       const proof = {
         app: 'Time Value Counter',
-        version: 2,
+        version: 3,
         goal: state.goal,
         name: state.name,
         finalCount: state.count,
         totalActiveMs: state.totalActiveMs + (state.currentSession ? Date.now() - state.currentSession.start : 0),
         exportedAt: new Date().toISOString(),
         createdAt: state.createdAt ? new Date(state.createdAt).toISOString() : null,
+        voiceEnabled: state.voiceEnabled,
         sessions: [
           ...(state.currentSession ? [{ ...state.currentSession, end: Date.now() }] : []),
           ...state.sessions
@@ -445,7 +519,7 @@
       a.download = `tvc-proof-${state.count}-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Verifiable proof log downloaded (includes SHA-256 hash)');
+      showToast('Verifiable proof log downloaded');
     }
 
     async function importLog(file) {
@@ -453,14 +527,14 @@
         const text = await file.text();
         const data = JSON.parse(text);
         if (!data.app || !data.sessions) throw new Error('Invalid log');
-        // Basic integrity note: we trust the file the user chose
-        if (!confirm(`Import log for "${data.name || 'Unknown'}"?\nCount: ${data.finalCount}\nGoal: ${data.goal}\nThis will replace current data on this device.`)) return;
+        if (!confirm(`Import log for "${data.name || 'Unknown'}"?\nCount: ${data.finalCount}\nGoal: ${data.goal}\nThis replaces current data on this device.`)) return;
 
         state.name = data.name || state.name;
         state.goal = data.goal || 100000;
         state.count = data.finalCount || 0;
         state.totalActiveMs = data.totalActiveMs || 0;
         state.createdAt = data.createdAt ? new Date(data.createdAt).getTime() : Date.now();
+        state.voiceEnabled = !!data.voiceEnabled;
         state.sessions = (data.sessions || []).map(s => ({
           id: s.id || crypto.randomUUID(),
           start: new Date(s.start).getTime(),
@@ -471,6 +545,7 @@
         }));
         state.currentSession = null;
         state.nextChallengeAt = state.count + 50;
+        state.lastCountAt = null;
         save();
         updateUI();
         showToast('Log imported successfully');
@@ -548,14 +623,29 @@
       document.getElementById('challengeSubmit').addEventListener('click', resolveChallenge);
       document.getElementById('challengeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') resolveChallenge(); });
 
+      // Spacebar: one count per full press (ignore auto-repeat)
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
           e.preventDefault();
+          if (spaceHeld) return; // already held / auto-repeat
+          spaceHeld = true;
           doCount();
         }
       });
-      document.addEventListener('visibilitychange', handleVisibility);
+      document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') spaceHeld = false;
+      });
 
+      // Voice toggle
+      const voiceToggle = document.getElementById('voiceToggle');
+      voiceToggle.addEventListener('click', () => {
+        state.voiceEnabled = !state.voiceEnabled;
+        voiceToggle.classList.toggle('on', state.voiceEnabled);
+        if (state.voiceEnabled) showToast('Voice on — numbers will be spoken');
+        else showToast('Voice off');
+      });
+
+      document.addEventListener('visibilitychange', handleVisibility);
       setInterval(() => { if (state.currentSession && isFocused) updateUI(); }, 1000);
 
       window.addEventListener('beforeunload', () => {
@@ -565,9 +655,14 @@
         }
       });
 
-      // PWA
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+
+      // Load voices for speech synthesis
+      if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {};
       }
     }
 
@@ -579,7 +674,8 @@
       state.count = 0;
       state.totalActiveMs = 0;
       state.sessions = [];
-      state.nextChallengeAt = 30 + Math.floor(Math.random() * 40);
+      state.nextChallengeAt = 35 + Math.floor(Math.random() * 40);
+      state.lastCountAt = null;
       startSession();
       save();
       document.getElementById('onboarding').style.display = 'none';
@@ -593,6 +689,7 @@
       document.querySelectorAll('#settingsGoalChips .goal-chip').forEach(b => {
         b.classList.toggle('active', parseInt(b.dataset.goal, 10) === state.goal);
       });
+      document.getElementById('voiceToggle').classList.toggle('on', state.voiceEnabled);
       document.getElementById('settingsModal').style.display = 'flex';
     }
 
