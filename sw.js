@@ -1,5 +1,5 @@
 // Service worker — bump CACHE name whenever index.html changes so clients drop old copies
-const CACHE = 'tvc-v7';
+const CACHE = 'tvc-v8';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -16,7 +16,6 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Network-first for HTML so updates land quickly; cache fallback for offline
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
