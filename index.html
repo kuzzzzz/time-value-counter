@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Presence-verified counting app. Track every second of focused time toward 100,000. Inspired by the value of attention in an inflating world." />
+  <title>Time Value Counter — Count to 100k</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --surface: #111827;
+      --surface-2: #1f2937;
+      --border: #374151;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --accent-dim: #0ea5e9;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --radius: 16px;
+      --shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+
+    /* Header */
+    header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11, 18, 32, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .logo {
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: -0.03em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    button, .btn {
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+    .btn-ghost:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+      color: #0f172a;
+      padding: 0.7rem 1.25rem;
+      font-size: 0.95rem;
+      box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 25px rgba(56, 189, 248, 0.35);
+    }
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-danger {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--danger);
+      padding: 0.5rem 0.9rem;
+      font-size: 0.85rem;
+    }
+    .btn-danger:hover {
+      background: rgba(248, 113, 113, 0.25);
+    }
+
+    /* Main layout */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 900px) {
+      main {
+        grid-template-columns: 1.4fr 1fr;
+        padding-top: 2rem;
+      }
+    }
+
+    /* Counter Card */
+    .counter-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .counter-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top, rgba(56, 189, 248, 0.08), transparent 60%);
+      pointer-events: none;
+    }
+
+    .goal-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+    }
+
+    .current-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(3.5rem, 12vw, 5.5rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      background: linear-gradient(180deg, #fff 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-wrap {
+      margin: 1.5rem 0 1.75rem;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--surface-2);
+      border-radius: 99px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+      border-radius: 99px;
+      transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+
+    .count-btn {
+      width: 100%;
+      max-width: 280px;
+      height: 64px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      color: #0f172a;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 30px rgba(14, 165, 233, 0.35);
+      transition: all 0.15s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .count-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 35px rgba(14, 165, 233, 0.45);
+    }
+
+    .count-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .count-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .count-btn .hint {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 500;
+      opacity: 0.75;
+      margin-top: 2px;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: center;
+      gap: 1.25rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .status-dot.warning { background: var(--warning); }
+    .status-dot.danger { background: var(--danger); }
+
+    /* Side panel */
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .card h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .stat {
+      background: var(--surface-2);
+      border-radius: 12px;
+      padding: 0.9rem;
+    }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    /* Notes */
+    .note-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .note-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .note-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    /* History */
+    .history-list {
+      max-height: 280px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .history-item {
+      background: var(--surface-2);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .history-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .history-meta {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .history-note {
+      margin-top: 0.25rem;
+      color: var(--text);
+      font-style: italic;
+    }
+
+    /* Onboarding / Profile */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: var(--shadow);
+    }
+
+    .modal h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.03em;
+    }
+
+    .modal p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 0.85rem 1rem;
+      font-family: inherit;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Focus warning */
+    .focus-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--danger);
+      color: #fff;
+      text-align: center;
+      padding: 0.6rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      z-index: 200;
+      transform: translateY(-100%);
+      transition: transform 0.3s ease;
+    }
+
+    .focus-banner.visible {
+      transform: translateY(0);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem 1.25rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      z-index: 150;
+      transition: transform 0.3s ease;
+      box-shadow: var(--shadow);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 1.5rem 0;
+    }
+
+    /* Footer note */
+    .philosophy {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .philosophy strong {
+      color: var(--accent);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 99px;
+    }
+  </style>
+</head>
+<body>
+  <div class="focus-banner" id="focusBanner">
+    ⚠️ Tab not focused — counting paused. Come back to continue.
+  </div>
+
+  <header>
+    <div class="logo">
+      <span>⏱</span> Time Value <span>Counter</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-ghost" id="exportBtn" title="Export full proof log">Export Log</button>
+      <button class="btn-ghost" id="settingsBtn" title="Settings">Settings</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left: Counter -->
+    <section class="counter-card">
+      <div class="goal-label">Counting toward 100,000</div>
+      <div class="current-count" id="countDisplay">0</div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-meta">
+          <span id="percentText">0.000%</span>
+          <span id="remainingText">100,000 left</span>
+        </div>
+      </div>
+
+      <button class="count-btn" id="countBtn">
+        COUNT
+        <span class="hint">or press Space</span>
+      </button>
+
+      <div class="status-row">
+        <div class="status-item">
+          <div class="status-dot" id="focusDot"></div>
+          <span id="focusText">Focused</span>
+        </div>
+        <div class="status-item">
+          <span id="sessionTime">Session: 0m</span>
+        </div>
+        <div class="status-item">
+          <span id="rateText">— / min</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Stats + Notes + History -->
+    <div class="side-panel">
+      <!-- Stats -->
+      <div class="card">
+        <h2>Your Time</h2>
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat-value" id="totalTime">0h 0m</div>
+            <div class="stat-label">Active time</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="sessionsCount">0</div>
+            <div class="stat-label">Sessions</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="avgRate">—</div>
+            <div class="stat-label">Avg / hour</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="eta">—</div>
+            <div class="stat-label">Est. finish</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Note -->
+      <div class="card">
+        <h2>Session Note</h2>
+        <textarea class="note-input" id="noteInput" placeholder="What’s happening in the background? (meeting, kids, traffic, deep work…)"></textarea>
+        <div class="note-actions">
+          <button class="btn-primary" id="saveNoteBtn" style="flex:1">Save Note</button>
+        </div>
+      </div>
+
+      <!-- Recent History -->
+      <div class="card">
+        <h2>Recent Activity</h2>
+        <div class="history-list" id="historyList">
+          <div class="empty">Start counting to build your log</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <p class="philosophy" style="padding: 0 1.5rem 2rem;">
+    Every number is a second of focused attention.<br>
+    Most people will never count this high. Yet the money supply keeps expanding.<br>
+    <strong>What is your time actually worth?</strong>
+  </p>
+
+  <!-- Onboarding Modal -->
+  <div class="overlay" id="onboarding" style="display: none;">
+    <div class="modal">
+      <h1>Begin the count</h1>
+      <p>
+        This is a presence-verified counter. Every number is timestamped.
+        The goal is 100,000 — not for the video, but to confront how much focused time is required.
+      </p>
+      <input class="input" id="nameInput" type="text" placeholder="Your name or alias" maxlength="40" />
+      <button class="btn-primary" id="startBtn" style="width:100%">Start Counting</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="overlay" id="settingsModal" style="display: none;">
+    <div class="modal">
+      <h1>Settings</h1>
+      <p style="margin-bottom: 1rem;">Your data lives only on this device. Export regularly.</p>
+      
+      <label style="font-size:0.85rem;color:var(--muted);display:block;margin-bottom:0.4rem;">Display Name</label>
+      <input class="input" id="settingsName" type="text" maxlength="40" />
+
+      <div style="display:flex;flex-direction:column;gap:0.6rem;margin-top:0.5rem;">
+        <button class="btn-primary" id="saveSettingsBtn">Save</button>
+        <button class="btn-danger" id="resetBtn">Reset All Data</button>
+        <button class="btn-ghost" id="closeSettingsBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ==================== State ====================
+    const GOAL = 100000;
+    const STORAGE_KEY = 'tvc_v1';
+
+    let state = {
+      name: '',
+      count: 0,
+      totalActiveMs: 0,
+      sessions: [],          // { id, start, end, counts, note, timestamps: number[] }
+      currentSession: null,  // { id, start, counts, note, timestamps: [] }
+      lastCountAt: null,
+      createdAt: null
+    };
+
+    let sessionTimerInterval = null;
+    let isFocused = true;
+    let lastTick = Date.now();
+
+    // ==================== Persistence ====================
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          state = { ...state, ...parsed };
+        }
+      } catch (e) {
+        console.warn('Failed to load state', e);
+      }
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        showToast('Storage full — export your log soon!');
+      }
+    }
+
+    // ==================== Session Management ====================
+    function startSession() {
+      if (state.currentSession) return;
+      state.currentSession = {
+        id: crypto.randomUUID(),
+        start: Date.now(),
+        counts: 0,
+        note: '',
+        timestamps: []
+      };
+      lastTick = Date.now();
+      save();
+      updateUI();
+    }
+
+    function endSession() {
+      if (!state.currentSession) return;
+      const sess = state.currentSession;
+      sess.end = Date.now();
+      state.sessions.unshift(sess);
+      // Keep only last 50 full sessions in memory for UI, but timestamps stay with count log conceptually
+      if (state.sessions.length > 80) state.sessions.pop();
+      state.currentSession = null;
+      save();
+    }
+
+    // ==================== Counting ====================
+    function doCount() {
+      if (!isFocused) {
+        showToast('Stay focused on this tab to count');
+        return;
+      }
+      if (!state.currentSession) startSession();
+
+      state.count += 1;
+      const now = Date.now();
+      state.currentSession.counts += 1;
+      state.currentSession.timestamps.push(now);
+      state.lastCountAt = now;
+
+      // Keep timestamps array reasonable (last 500 per session is plenty for proof)
+      if (state.currentSession.timestamps.length > 600) {
+        state.currentSession.timestamps = state.currentSession.timestamps.slice(-500);
+      }
+
+      save();
+      updateUI();
+      pulseButton();
+    }
+
+    // ==================== UI Updates ====================
+    function formatNumber(n) {
+      return n.toLocaleString('en-US');
+    }
+
+    function formatDuration(ms) {
+      if (ms < 1000) return '0m';
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    }
+
+    function formatRate(counts, ms) {
+      if (ms < 10000) return '—';
+      const perMin = (counts / (ms / 60000)).toFixed(1);
+      return `${perMin}/min`;
+    }
+
+    function updateUI() {
+      // Count & progress
+      document.getElementById('countDisplay').textContent = formatNumber(state.count);
+      const pct = (state.count / GOAL) * 100;
+      document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
+      document.getElementById('percentText').textContent = pct.toFixed(3) + '%';
+      document.getElementById('remainingText').textContent = formatNumber(Math.max(0, GOAL - state.count)) + ' left';
+
+      // Session time & rate
+      let sessionMs = 0;
+      let sessionCounts = 0;
+      if (state.currentSession) {
+        sessionMs = Date.now() - state.currentSession.start;
+        sessionCounts = state.currentSession.counts;
+      }
+      document.getElementById('sessionTime').textContent = 'Session: ' + formatDuration(sessionMs);
+      document.getElementById('rateText').textContent = formatRate(sessionCounts, sessionMs);
+
+      // Focus indicator
+      const dot = document.getElementById('focusDot');
+      const focusText = document.getElementById('focusText');
+      if (isFocused) {
+        dot.className = 'status-dot';
+        focusText.textContent = 'Focused';
+      } else {
+        dot.className = 'status-dot danger';
+        focusText.textContent = 'Not focused';
+      }
+
+      // Global stats
+      let totalMs = state.totalActiveMs;
+      if (state.currentSession && isFocused) {
+        totalMs += (Date.now() - lastTick);
+      }
+      document.getElementById('totalTime').textContent = formatDuration(totalMs + (state.currentSession ? Date.now() - state.currentSession.start : 0));
+
+      // Better total time calculation
+      let computedTotal = state.totalActiveMs;
+      if (state.currentSession) {
+        computedTotal += Date.now() - state.currentSession.start;
+      }
+      document.getElementById('totalTime').textContent = formatDuration(computedTotal);
+
+      document.getElementById('sessionsCount').textContent = state.sessions.length + (state.currentSession ? 1 : 0);
+
+      // Average rate
+      if (computedTotal > 60000) {
+        const perHour = Math.round((state.count / (computedTotal / 3600000)));
+        document.getElementById('avgRate').textContent = formatNumber(perHour);
+      } else {
+        document.getElementById('avgRate').textContent = '—';
+      }
+
+      // ETA
+      if (state.count > 50 && computedTotal > 120000) {
+        const ratePerMs = state.count / computedTotal;
+        const remaining = GOAL - state.count;
+        const etaMs = remaining / ratePerMs;
+        const etaDate = new Date(Date.now() + etaMs);
+        document.getElementById('eta').textContent = etaDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      } else {
+        document.getElementById('eta').textContent = '—';
+      }
+
+      // History (recent timestamps + session notes)
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('historyList');
+      const items = [];
+
+      // Current session first
+      if (state.currentSession && state.currentSession.counts > 0) {
+        const s = state.currentSession;
+        items.push({
+          count: state.count,
+          ts: s.timestamps[s.timestamps.length - 1] || s.start,
+          note: s.note || null,
+          isCurrent: true,
+          sessionCounts: s.counts
+        });
+      }
+
+      // Past sessions (most recent first)
+      for (const s of state.sessions.slice(0, 12)) {
+        items.push({
+          count: null,
+          ts: s.end || s.start,
+          note: s.note,
+          sessionCounts: s.counts,
+          start: s.start,
+          end: s.end
+        });
+      }
+
+      if (items.length === 0) {
+        list.innerHTML = '<div class="empty">Start counting to build your log</div>';
+        return;
+      }
+
+      list.innerHTML = items.map(item => {
+        const timeStr = new Date(item.ts).toLocaleString(undefined, {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        if (item.isCurrent) {
+          return `
+            <div class="history-item">
+              <div>
+                <div class="history-count">#${formatNumber(item.count)}</div>
+                <div class="history-meta">${timeStr} · current session (+${item.sessionCounts})</div>
+                ${item.note ? `<div class="history-note">“${escapeHtml(item.note)}”</div>` : ''}
+              </div>
+            </div>`;
+        }
+        return `
+          <div class="history-item">
+            <div>
+              <div class="history-count">+${formatNumber(item.sessionCounts)}</div>
+              <div class="history-meta">${timeStr}</div>
+              ${item.note ? `<div class="history-note">“${escapeHtml(item.note)}”</div>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"');
+    }
+
+    function pulseButton() {
+      const btn = document.getElementById('countBtn');
+      btn.style.transform = 'scale(0.97)';
+      setTimeout(() => btn.style.transform = '', 80);
+    }
+
+    // ==================== Focus / Presence ====================
+    function handleVisibility() {
+      const wasFocused = isFocused;
+      isFocused = document.visibilityState === 'visible';
+
+      const banner = document.getElementById('focusBanner');
+      if (!isFocused) {
+        banner.classList.add('visible');
+        // Accumulate active time so far in this session
+        if (state.currentSession && wasFocused) {
+          // We don't double-count; the live timer just freezes visually
+        }
+      } else {
+        banner.classList.remove('visible');
+        lastTick = Date.now();
+      }
+      updateUI();
+    }
+
+    // ==================== Notes ====================
+    function saveNote() {
+      const note = document.getElementById('noteInput').value.trim();
+      if (!state.currentSession) startSession();
+      state.currentSession.note = note;
+      save();
+      showToast(note ? 'Note saved to this session' : 'Note cleared');
+      updateUI();
+    }
+
+    // ==================== Export ====================
+    function exportLog() {
+      // Build a complete proof object
+      const proof = {
+        app: 'Time Value Counter',
+        version: 1,
+        goal: GOAL,
+        name: state.name,
+        finalCount: state.count,
+        totalActiveMs: state.totalActiveMs + (state.currentSession ? Date.now() - state.currentSession.start : 0),
+        exportedAt: new Date().toISOString(),
+        createdAt: state.createdAt ? new Date(state.createdAt).toISOString() : null,
+        sessions: [
+          ...(state.currentSession ? [{
+            ...state.currentSession,
+            end: Date.now(),
+            note: state.currentSession.note
+          }] : []),
+          ...state.sessions
+        ].map(s => ({
+          id: s.id,
+          start: new Date(s.start).toISOString(),
+          end: s.end ? new Date(s.end).toISOString() : null,
+          counts: s.counts,
+          note: s.note || null,
+          // Include a sample of timestamps for verifiability (first, last, and every ~50th)
+          sampleTimestamps: (s.timestamps || []).filter((_, i, arr) => 
+            i === 0 || i === arr.length - 1 || i % 50 === 0
+          ).map(t => new Date(t).toISOString())
+        }))
+      };
+
+      const blob = new Blob([JSON.stringify(proof, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `time-value-counter-${state.count}-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Proof log downloaded');
+    }
+
+    // ==================== Toast ====================
+    let toastTimer;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+    }
+
+    // ==================== Init ====================
+    function init() {
+      load();
+
+      if (!state.name) {
+        document.getElementById('onboarding').style.display = 'flex';
+      } else {
+        if (!state.currentSession) startSession();
+        updateUI();
+      }
+
+      // Event listeners
+      document.getElementById('countBtn').addEventListener('click', doCount);
+      document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
+      document.getElementById('exportBtn').addEventListener('click', exportLog);
+      document.getElementById('settingsBtn').addEventListener('click', openSettings);
+      document.getElementById('startBtn').addEventListener('click', startOnboarding);
+      document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+      document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+        document.getElementById('settingsModal').style.display = 'none';
+      });
+      document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+      // Keyboard
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+          e.preventDefault();
+          doCount();
+        }
+      });
+
+      // Visibility
+      document.addEventListener('visibilitychange', handleVisibility);
+
+      // Live timer
+      sessionTimerInterval = setInterval(() => {
+        if (state.currentSession && isFocused) {
+          updateUI();
+        }
+      }, 1000);
+
+      // Before unload — end session cleanly
+      window.addEventListener('beforeunload', () => {
+        if (state.currentSession) {
+          // Persist active time
+          state.totalActiveMs += Date.now() - state.currentSession.start;
+          endSession();
+        }
+      });
+    }
+
+    function startOnboarding() {
+      const name = document.getElementById('nameInput').value.trim() || 'Anonymous';
+      state.name = name;
+      state.createdAt = Date.now();
+      state.count = 0;
+      state.totalActiveMs = 0;
+      state.sessions = [];
+      startSession();
+      save();
+      document.getElementById('onboarding').style.display = 'none';
+      updateUI();
+      showToast(`Welcome, ${name}. Let’s begin.`);
+    }
+
+    function openSettings() {
+      document.getElementById('settingsName').value = state.name;
+      document.getElementById('settingsModal').style.display = 'flex';
+    }
+
+    function saveSettings() {
+      const name = document.getElementById('settingsName').value.trim();
+      if (name) state.name = name;
+      save();
+      document.getElementById('settingsModal').style.display = 'none';
+      showToast('Settings saved');
+    }
+
+    function resetAll() {
+      if (!confirm('This will permanently delete all your counting data on this device. Export first if you care about the log. Continue?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+
+    // Boot
+    init();
+  </script>
+</body>
+</html>
