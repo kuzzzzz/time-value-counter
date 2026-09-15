@@ -95,6 +95,9 @@ main{flex:1;display:grid;grid-template-columns:1fr;max-width:1100px;width:100%;m
 .challenge-box{background:rgba(251,191,36,.12);border:1px solid var(--warning);border-radius:12px;padding:1rem;margin-top:1rem;text-align:left}
 .challenge-box h3{font-size:.9rem;margin-bottom:.5rem;color:var(--warning)}
 .challenge-box p{font-size:.88rem;margin-bottom:.6rem;color:var(--muted)}
+.compare-grid{display:grid;gap:.6rem}
+.compare-item{background:var(--surface-2);border-radius:10px;padding:.7rem .85rem;font-size:.82rem}
+.compare-item strong{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -138,6 +141,10 @@ main{flex:1;display:grid;grid-template-columns:1fr;max-width:1100px;width:100%;m
 <div class="stat"><div class="stat-value" id="sessionsCount">0</div><div class="stat-label">Sessions</div></div>
 <div class="stat"><div class="stat-value" id="avgRate">—</div><div class="stat-label">Avg / hour</div></div>
 <div class="stat"><div class="stat-value" id="eta">—</div><div class="stat-label">Est. finish</div></div>
+</div></div>
+<div class="card"><h2>While you counted…</h2>
+<div class="compare-grid" id="compareGrid">
+<div class="compare-item">Start counting to see comparisons</div>
 </div></div>
 <div class="card"><h2>Leaderboard</h2><div class="leaderboard-list" id="leaderboardList"><div class="empty">Loading…</div></div></div>
 <div class="card"><h2>Session Note</h2>
@@ -229,7 +236,35 @@ async function speakNumber(n){if(!state.voiceEnabled)return;isSpeaking=true;try{
 async function doCount(){if(!canCount()){if(!isFocused)showToast('Stay focused on this tab');return}if(!state.currentSession)startSession();state.count+=1;const now=Date.now();state.currentSession.counts+=1;state.currentSession.timestamps.push(now);state.lastCountAt=now;if(state.currentSession.timestamps.length>400)state.currentSession.timestamps=state.currentSession.timestamps.slice(-300);const display=document.getElementById('countDisplay');display.classList.add('pulse');setTimeout(()=>display.classList.remove('pulse'),120);setButtonCooling(true,state.voiceEnabled?'speaking…':'wait…');await speakNumber(state.count);if(state.count>=state.goal)document.getElementById('finishedBanner').style.display='block';if(!pendingChallenge&&state.nextChallengeAt&&state.count>=state.nextChallengeAt)showChallenge();else if(!state.nextChallengeAt&&state.count>=20)scheduleNextChallenge();saveLocal();scheduleSync();updateUI();setTimeout(()=>setButtonCooling(false,'or press Space'),MIN_INTERVAL_MS)}
 function startSession(){state.currentSession={start:Date.now(),counts:0,timestamps:[],note:''}}
 function endSession(){if(!state.currentSession)return;state.currentSession.end=Date.now();state.sessions.push(state.currentSession);if(state.sessions.length>50)state.sessions=state.sessions.slice(-50);state.currentSession=null;saveLocal()}
-function updateUI(){document.getElementById('countDisplay').textContent=formatNumber(state.count);const pct=(state.count/state.goal)*100;document.getElementById('progressFill').style.width=Math.min(pct,100)+'%';document.getElementById('percentText').textContent=pct.toFixed(3)+'%';document.getElementById('remainingText').textContent=formatNumber(Math.max(state.goal-state.count,0))+' left';document.getElementById('goalLabel').textContent='Counting toward '+formatNumber(state.goal);const activeMs=state.totalActiveMs+(state.currentSession?Date.now()-state.currentSession.start:0);document.getElementById('totalTime').textContent=msToHM(activeMs);document.getElementById('sessionsCount').textContent=state.sessions.length+(state.currentSession?1:0);const rate=activeMs>0?(state.count/(activeMs/3600000)):0;document.getElementById('avgRate').textContent=rate>0?rate.toFixed(0):'—';const perMin=state.currentSession&&(Date.now()-state.currentSession.start)>0?(state.currentSession.counts/((Date.now()-state.currentSession.start)/60000)).toFixed(1):'—';document.getElementById('rateText').textContent=perMin+' / min';document.getElementById('sessionTime').textContent='Session: '+(state.currentSession?Math.floor((Date.now()-state.currentSession.start)/60000):0)+'m';let etaText='—';if(rate>0&&state.count<state.goal){const hoursLeft=(state.goal-state.count)/rate;etaText=new Date(Date.now()+hoursLeft*3600000).toLocaleDateString('en-US',{month:'short',day:'numeric'})}document.getElementById('eta').textContent=etaText;const hist=document.getElementById('historyList');if(!state.sessions.length&&!state.currentSession)hist.innerHTML='<div class="empty">Start counting to build your log</div>';else{const recent=[...state.sessions].reverse().slice(0,8);hist.innerHTML=recent.map(s=>`<div class="history-item"><span class="history-count">+${s.counts}</span><span class="history-meta"> · ${new Date(s.start).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}${s.note?' · '+esc(s.note):''}</span></div>`).join('')}const noteEl=document.getElementById('noteInput');if(document.activeElement!==noteEl)noteEl.value=state.currentSession?.note||'';updateAuthUI()}
+function updateComparisons(){
+  const grid=document.getElementById('compareGrid');
+  if(!grid)return;
+  const activeMs=state.totalActiveMs+(state.currentSession?Date.now()-state.currentSession.start:0);
+  if(state.count<5||activeMs<10000){
+    grid.innerHTML='<div class="compare-item">Start counting to see comparisons</div>';
+    return;
+  }
+  const hours=activeMs/3600000;
+  const mins=activeMs/60000;
+  const items=[];
+  const earned=hours*7.25;
+  items.push('In this time, a minimum-wage worker would have earned about <strong>$'+earned.toFixed(2)+'</strong>.');
+  items.push('While you counted, the money supply kept expanding — prices do not wait for people who can count to 100k.');
+  const beats=Math.round(mins*70);
+  items.push('Your heart beat roughly <strong>'+beats.toLocaleString()+'</strong> times.');
+  const breaths=Math.round(mins*16);
+  items.push('You took about <strong>'+breaths.toLocaleString()+'</strong> breaths.');
+  if(hours>0.05){
+    const videos=Math.floor(mins/10);
+    if(videos>0) items.push('That is enough time for about <strong>'+videos+'</strong> short videos — most people would have scrolled instead.');
+  }
+  items.push('You have placed <strong>'+formatNumber(state.count)+'</strong> deliberate counts. Most people never will.');
+  if(state.count>=1000){
+    items.push('At this pace, finishing '+formatNumber(state.goal)+' is a real act of focused attention — rarer than most currencies admit.');
+  }
+  grid.innerHTML=items.slice(0,5).map(t=>'<div class="compare-item">'+t+'</div>').join('');
+}
+function updateUI(){document.getElementById('countDisplay').textContent=formatNumber(state.count);const pct=(state.count/state.goal)*100;document.getElementById('progressFill').style.width=Math.min(pct,100)+'%';document.getElementById('percentText').textContent=pct.toFixed(3)+'%';document.getElementById('remainingText').textContent=formatNumber(Math.max(state.goal-state.count,0))+' left';document.getElementById('goalLabel').textContent='Counting toward '+formatNumber(state.goal);const activeMs=state.totalActiveMs+(state.currentSession?Date.now()-state.currentSession.start:0);document.getElementById('totalTime').textContent=msToHM(activeMs);document.getElementById('sessionsCount').textContent=state.sessions.length+(state.currentSession?1:0);const rate=activeMs>0?(state.count/(activeMs/3600000)):0;document.getElementById('avgRate').textContent=rate>0?rate.toFixed(0):'—';const perMin=state.currentSession&&(Date.now()-state.currentSession.start)>0?(state.currentSession.counts/((Date.now()-state.currentSession.start)/60000)).toFixed(1):'—';document.getElementById('rateText').textContent=perMin+' / min';document.getElementById('sessionTime').textContent='Session: '+(state.currentSession?Math.floor((Date.now()-state.currentSession.start)/60000):0)+'m';let etaText='—';if(rate>0&&state.count<state.goal){const hoursLeft=(state.goal-state.count)/rate;etaText=new Date(Date.now()+hoursLeft*3600000).toLocaleDateString('en-US',{month:'short',day:'numeric'})}document.getElementById('eta').textContent=etaText;const hist=document.getElementById('historyList');if(!state.sessions.length&&!state.currentSession)hist.innerHTML='<div class="empty">Start counting to build your log</div>';else{const recent=[...state.sessions].reverse().slice(0,8);hist.innerHTML=recent.map(s=>`<div class="history-item"><span class="history-count">+${s.counts}</span><span class="history-meta"> · ${new Date(s.start).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}${s.note?' · '+esc(s.note):''}</span></div>`).join('')}const noteEl=document.getElementById('noteInput');if(document.activeElement!==noteEl)noteEl.value=state.currentSession?.note||'';updateComparisons();updateAuthUI()}
 function msToHM(ms){const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h+'h '+m+'m'}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),2500)}
 function handleVisibility(){isFocused=!document.hidden;document.getElementById('focusBanner').classList.toggle('visible',!isFocused);document.getElementById('focusDot').classList.toggle('danger',!isFocused);document.getElementById('focusText').textContent=isFocused?'Focused':'Away';if(!isFocused&&state.currentSession){state.totalActiveMs+=Date.now()-state.currentSession.start;endSession()}else if(isFocused&&!state.currentSession)startSession()}
