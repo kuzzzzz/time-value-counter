@@ -1,5 +1,5 @@
 // Service worker — bump CACHE name whenever index.html changes so clients drop old copies
-const CACHE = 'tvc-v9';
+const CACHE = 'tvc-v10';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (e) => {
