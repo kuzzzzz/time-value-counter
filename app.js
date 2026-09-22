@@ -7,7 +7,7 @@ let user=null,isFocused=true,selectedGoal=100000,spaceHeld=false,isCooling=false
 function loadLocal(){OLD_KEYS.forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)state=Object.assign(state,JSON.parse(raw));if(!state.voiceRate)state.voiceRate=1;const realSess=(state.sessions||[]).filter(s=>(s.counts||0)>0);state.sessions=realSess;if(!state.totalSessions||state.totalSessions<realSess.length)state.totalSessions=realSess.length}catch(e){}}
 function saveLocal(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
 function clearOldLocal(){[STORAGE_KEY,...OLD_KEYS].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});state={name:'',goal:100000,count:0,totalActiveMs:0,sessions:[],totalSessions:0,currentSession:null,lastCountAt:null,createdAt:null,nextChallengeAt:0,voiceEnabled:false,voiceRate:1,feedMode:false,feedPlaylistId:'',feedVideoIds:[],feedIndex:0};saveLocal();updateUI();showToast('Old local data cleared')}
-async function ensureProfile(){if(!user||!sb)return;try{const{data}=await sb.from('profiles').select('id').eq('id',user.id).maybeSingle();if(!data){const name=state.name||user.email?.split('@')[0]||'Anonymous';await sb.from('profiles').insert({id:user.id,display_name:name,username:(name.toLowerCase().replace(/[^a-z0-9]/g,'_')||'user')+'_'+user.id.slice(0,4)})}}catch(e){console.warn(e)}}
+async function ensureProfile(){if(!user||!sb)return;try{const{data}=await sb.from('profiles').select('id').eq('id',user.id).maybeSingle();if(!data){const name=state.name||user.email?.split('@')[0]||'Anonymous';await sb.from('profiles').insert({id:user.id,display_name:name,username:(name.toLowerCase().replace(/[^a-z0-9]+/g,'_')||'user')+'_'+user.id.slice(0,4)})}}catch(e){console.warn(e)}}
 async function loadFromCloud(){if(!user||!sb)return;try{const{data,error}=await sb.from('progress').select('*').eq('user_id',user.id).maybeSingle();if(error)throw error;if(data){const cloudCount=data.count||0;const cloudMs=data.total_active_ms||0;if(cloudCount>state.count){state.count=cloudCount;state.goal=data.goal||state.goal;state.totalActiveMs=Math.max(state.totalActiveMs,cloudMs);if(data.voice_enabled!=null)state.voiceEnabled=!!data.voice_enabled;state.lastCountAt=data.last_count_at?new Date(data.last_count_at).getTime():state.lastCountAt;saveLocal();updateUI();showToast('Synced from cloud ('+cloudCount.toLocaleString()+')')}else if(state.count>cloudCount){await pushToCloud();showToast('Uploaded local count to cloud')}else{state.totalActiveMs=Math.max(state.totalActiveMs,cloudMs);saveLocal();showToast('Already in sync')}}else await pushToCloud()}catch(e){console.warn(e);showToast('Sync failed')}}
 async function pushToCloud(){if(!user||!sb)return;try{await ensureProfile();const payload={user_id:user.id,goal:state.goal,count:state.count,total_active_ms:state.totalActiveMs+(state.currentSession?Date.now()-state.currentSession.start:0),voice_enabled:state.voiceEnabled,last_count_at:state.lastCountAt?new Date(state.lastCountAt).toISOString():null,updated_at:new Date().toISOString()};const{error}=await sb.from('progress').upsert(payload,{onConflict:'user_id'});if(error)throw error}catch(e){console.warn(e)}}
 function scheduleSync(){if(!user)return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>pushToCloud(),1500)}
@@ -18,14 +18,54 @@ async function loadPublicProof(key){if(!sb){document.getElementById('proofMeta')
 function showProofMode(on){const view=document.getElementById('proofView');const header=document.querySelector('header');const main=document.querySelector('main');const phil=document.querySelector('.philosophy');if(view)view.style.display=on?'block':'none';if(header)header.style.display=on?'none':'flex';if(main)main.style.display=on?'none':'grid';if(phil)phil.style.display=on?'none':'block'}
 async function copyProofLink(){let uname='';if(user&&sb){try{const{data}=await sb.from('profiles').select('username,display_name').eq('id',user.id).maybeSingle();if(data&&data.username)uname=data.username}catch(e){}}if(!uname&&state.name){uname=state.name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'user'}if(!uname){showToast('Sign in and sync first');return}const base=location.origin+location.pathname.replace(/index\.html$/,'');const url=base+(base.endsWith('/')?'':'/')+'?u='+encodeURIComponent(uname);try{await navigator.clipboard.writeText(url);showToast('Proof link copied')}catch(e){prompt('Copy this proof link:',url)}}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]))}
+const FEED_DISCOVER={shorts:{listType:'search',list:'youtube shorts'},study:{listType:'search',list:'study with me'},lofi:{listType:'search',list:'lofi hip hop radio'},news:{listType:'search',list:'world news today'},tech:{listType:'search',list:'technology explained'}};
 let ytPlayer=null,ytReady=false;
 function onYouTubeIframeAPIReady(){ytReady=true;if(state.feedMode)setupFeedPlayer()}
 window.onYouTubeIframeAPIReady=onYouTubeIframeAPIReady;
 function parseYouTubeInput(raw){const s=(raw||'').trim();if(!s)return null;let list=null,vid=null;try{const u=new URL(s.startsWith('http')?s:'https://'+s);list=u.searchParams.get('list');if(u.hostname.includes('youtu.be'))vid=u.pathname.slice(1).split('/')[0];else if(u.pathname.includes('/shorts/'))vid=u.pathname.split('/shorts/')[1].split('/')[0];else if(u.pathname.includes('/embed/'))vid=u.pathname.split('/embed/')[1].split('/')[0];else if(u.pathname.includes('/watch'))vid=u.searchParams.get('v');else if(u.pathname.includes('/playlist'))list=list||u.searchParams.get('list')}catch(e){if(/^[\w-]{11}$/.test(s))vid=s;if(/^PL[\w-]+$/.test(s)||/^UU[\w-]+$/.test(s))list=s}return{list,vid}}
-function setupFeedPlayer(){const wrap=document.getElementById('feedFrameWrap');const parsed=parseYouTubeInput(document.getElementById('feedUrlInput').value||state.feedPlaylistId);if(!parsed||(!parsed.list&&!parsed.vid)){showToast('Paste a YouTube link first');return}if(parsed.list)state.feedPlaylistId=parsed.list;if(parsed.vid){state.feedVideoIds=[parsed.vid];state.feedIndex=0}saveLocal();wrap.style.display='block';const elId='feedFrame';const host=document.getElementById(elId);if(host&&host.tagName==='IFRAME'){const div=document.createElement('div');div.id=elId;host.parentNode.replaceChild(div,host)}const start=()=>{if(typeof YT==='undefined'||!YT.Player){setTimeout(start,200);return}if(ytPlayer&&ytPlayer.destroy)try{ytPlayer.destroy()}catch(e){}const opts={height:'100%',width:'100%',playerVars:{autoplay:1,rel:0,modestbranding:1,playsinline:1}};if(parsed.list){opts.playerVars.listType='playlist';opts.playerVars.list=parsed.list}else if(parsed.vid){opts.videoId=parsed.vid}ytPlayer=new YT.Player(elId,{...opts,events:{onReady:()=>{showToast('Feed ready')}}})};start()}
-function feedNextVideo(){if(!ytPlayer){showToast('Load a feed first');return false}try{if(typeof ytPlayer.nextVideo==='function'){ytPlayer.nextVideo();return true}if(state.feedVideoIds&&state.feedVideoIds.length){state.feedIndex=(state.feedIndex+1)%state.feedVideoIds.length;ytPlayer.loadVideoById(state.feedVideoIds[state.feedIndex]);return true}}catch(e){console.warn(e)}showToast('Could not skip — try a playlist link');return false}
-function syncFeedUI(){const on=!!state.feedMode;const t=document.getElementById('feedToggle');if(t)t.classList.toggle('on',on);const lab=document.getElementById('feedToggleLabel');if(lab)lab.textContent=on?'Feed mode on':'Feed mode off';const panel=document.getElementById('feedPanel');if(panel)panel.classList.toggle('on',on);const row=document.getElementById('feedNextRow');if(row)row.style.display=on?'flex':'none';if(document.getElementById('feedUrlInput')&&state.feedPlaylistId&&!document.getElementById('feedUrlInput').value){document.getElementById('feedUrlInput').value=state.feedPlaylistId.startsWith('http')?state.feedPlaylistId:'https://www.youtube.com/playlist?list='+state.feedPlaylistId}}
-function toggleFeedMode(){state.feedMode=!state.feedMode;if(state.currentSession)state.currentSession.mode=state.feedMode?'feed':'focus';syncFeedUI();saveLocal();showToast(state.feedMode?'Feed mode on — load a YouTube link':'Feed mode off');if(state.feedMode&&(state.feedPlaylistId||document.getElementById('feedUrlInput').value))setupFeedPlayer()}
+function setupFeedPlayer(discoverKey){
+  const wrap=document.getElementById('feedFrameWrap');
+  if(!wrap)return;
+  let listType=null,list=null,vid=null;
+  if(discoverKey&&FEED_DISCOVER[discoverKey]){
+    listType=FEED_DISCOVER[discoverKey].listType;
+    list=FEED_DISCOVER[discoverKey].list;
+    state.feedPlaylistId='discover:'+discoverKey;
+    document.querySelectorAll('.feed-chip').forEach(c=>c.classList.toggle('active',c.dataset.discover===discoverKey));
+  }else{
+    const parsed=parseYouTubeInput(document.getElementById('feedUrlInput')?.value||state.feedPlaylistId);
+    if(!parsed||(!parsed.list&&!parsed.vid)){showToast('Paste a YouTube link or pick a topic');return}
+    if(parsed.list){listType='playlist';list=parsed.list;state.feedPlaylistId=parsed.list}
+    if(parsed.vid){vid=parsed.vid;state.feedVideoIds=[parsed.vid];state.feedIndex=0}
+    document.querySelectorAll('.feed-chip').forEach(c=>c.classList.remove('active'));
+  }
+  saveLocal();
+  wrap.style.display='block';
+  const elId='feedFrame';
+  const host=document.getElementById(elId);
+  if(host){
+    const div=document.createElement('div');
+    div.id=elId;
+    host.parentNode.replaceChild(div,host);
+  }
+  const start=()=>{
+    if(typeof YT==='undefined'||!YT.Player){setTimeout(start,200);return}
+    if(ytPlayer&&ytPlayer.destroy)try{ytPlayer.destroy()}catch(e){}
+    const opts={height:'100%',width:'100%',playerVars:{autoplay:1,rel:0,modestbranding:1,playsinline:1}};
+    if(listType==='search'&&list){opts.playerVars.listType='search';opts.playerVars.list=list}
+    else if(listType==='playlist'&&list){opts.playerVars.listType='playlist';opts.playerVars.list=list}
+    else if(vid){opts.videoId=vid}
+    else{showToast('Nothing to play');return}
+    ytPlayer=new YT.Player(elId,{...opts,events:{
+      onReady:()=>showToast(discoverKey?'Playing '+discoverKey:'Feed ready'),
+      onError:(e)=>{console.warn('YT error',e);showToast('Video unavailable — try Next or another topic')}
+    }});
+  };
+  start();
+}
+function feedNextVideo(){if(!ytPlayer){showToast('Load a feed first');return false}try{if(typeof ytPlayer.nextVideo==='function'){ytPlayer.nextVideo();return true}if(state.feedVideoIds&&state.feedVideoIds.length){state.feedIndex=(state.feedIndex+1)%state.feedVideoIds.length;ytPlayer.loadVideoById(state.feedVideoIds[state.feedIndex]);return true}}catch(e){console.warn(e)}showToast('Could not skip — try another topic');return false}
+function syncFeedUI(){const on=!!state.feedMode;const t=document.getElementById('feedToggle');if(t)t.classList.toggle('on',on);const lab=document.getElementById('feedToggleLabel');if(lab)lab.textContent=on?'Feed mode on':'Feed mode off';const panel=document.getElementById('feedPanel');if(panel){panel.classList.toggle('on',on);panel.style.display=on?'block':'none'}const row=document.getElementById('feedNextRow');if(row)row.style.display=on?'flex':'none';if(document.getElementById('feedUrlInput')&&state.feedPlaylistId&&!String(state.feedPlaylistId).startsWith('discover')&&!document.getElementById('feedUrlInput').value){document.getElementById('feedUrlInput').value=state.feedPlaylistId.startsWith('http')?state.feedPlaylistId:'https://www.youtube.com/playlist?list='+state.feedPlaylistId}}
+function toggleFeedMode(){state.feedMode=!state.feedMode;if(state.currentSession)state.currentSession.mode=state.feedMode?'feed':'focus';syncFeedUI();saveLocal();showToast(state.feedMode?'Feed mode on':'Feed mode off');if(state.feedMode){if(state.feedPlaylistId&&!String(state.feedPlaylistId).startsWith('discover:')&&!String(state.feedPlaylistId).startsWith('discover'))setupFeedPlayer();else setupFeedPlayer('shorts')}}
 async function doNextFeed(){if(!state.feedMode){showToast('Turn on Feed mode first');return}if(!canCount()){if(!isFocused)showToast('Stay focused on this tab');return}if(!state.currentSession)startSession();state.currentSession.mode='feed';state.count+=1;celebrateMilestone(state.count);const now=Date.now();state.currentSession.counts+=1;state.currentSession.timestamps.push(now);state.lastCountAt=now;if(state.currentSession.timestamps.length>400)state.currentSession.timestamps=state.currentSession.timestamps.slice(-300);const display=document.getElementById('countDisplay');display.classList.add('pulse');setTimeout(()=>display.classList.remove('pulse'),120);setButtonCooling(true,state.voiceEnabled?'speaking...':'wait...');const nb=document.getElementById('nextFeedBtn');if(nb)nb.disabled=true;feedNextVideo();await speakNumber(state.count);if(state.count>=state.goal)document.getElementById('finishedBanner').style.display='block';if(!pendingChallenge&&state.nextChallengeAt&&state.count>=state.nextChallengeAt)showChallenge();else if(!state.nextChallengeAt&&state.count>=20)scheduleNextChallenge();saveLocal();scheduleSync();updateUI();setTimeout(()=>{setButtonCooling(false,'or press Space');if(nb)nb.disabled=false},MIN_INTERVAL_MS)}
 function updateNotesJournal(){const el=document.getElementById('notesJournal');if(!el)return;const notes=[];if(state.currentSession&&state.currentSession.note)notes.push({...state.currentSession,live:true});[...(state.sessions||[])].reverse().forEach(s=>{if(s.note&&s.note.trim())notes.push(s)});if(!notes.length){el.innerHTML='<div class="empty">Notes you save while counting show up here</div>';return}el.innerHTML=notes.slice(0,40).map(s=>{const mode=(s.mode||'focus');const when=new Date(s.start).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});const live=s.live?' · live':'';return '<div class="note-entry"><div class="note-meta"><span class="note-mode '+mode+'">'+mode+'</span>+'+(s.counts||0)+' counts · '+when+live+'</div><div class="note-body">'+esc(s.note)+'</div></div>'}).join('')}
 function formatNumber(n){return n.toLocaleString('en-US')}
@@ -87,6 +127,7 @@ document.getElementById('voiceToggle').addEventListener('click',toggleVoice);
 document.getElementById('voiceToggleCard').addEventListener('click',toggleVoice);
 document.getElementById('feedToggle').addEventListener('click',toggleFeedMode);
 document.getElementById('feedLoadBtn').addEventListener('click',()=>{setupFeedPlayer();saveLocal()});
+document.querySelectorAll('.feed-chip').forEach(ch=>{ch.addEventListener('click',()=>{setupFeedPlayer(ch.dataset.discover);saveLocal()})});
 document.getElementById('nextFeedBtn').addEventListener('click',doNextFeed);
 document.getElementById('tipWaitlistBtn').addEventListener('click',submitTipWaitlist);
 document.getElementById('syncNowBtn').addEventListener('click',async()=>{if(!user){showToast('Sign in to sync');return}showToast('Syncing...');await loadFromCloud();await pushToCloud()});
