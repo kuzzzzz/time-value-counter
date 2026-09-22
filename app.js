@@ -18,53 +18,60 @@ async function loadPublicProof(key){if(!sb){document.getElementById('proofMeta')
 function showProofMode(on){const view=document.getElementById('proofView');const header=document.querySelector('header');const main=document.querySelector('main');const phil=document.querySelector('.philosophy');if(view)view.style.display=on?'block':'none';if(header)header.style.display=on?'none':'flex';if(main)main.style.display=on?'none':'grid';if(phil)phil.style.display=on?'none':'block'}
 async function copyProofLink(){let uname='';if(user&&sb){try{const{data}=await sb.from('profiles').select('username,display_name').eq('id',user.id).maybeSingle();if(data&&data.username)uname=data.username}catch(e){}}if(!uname&&state.name){uname=state.name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'user'}if(!uname){showToast('Sign in and sync first');return}const base=location.origin+location.pathname.replace(/index\.html$/,'');const url=base+(base.endsWith('/')?'':'/')+'?u='+encodeURIComponent(uname);try{await navigator.clipboard.writeText(url);showToast('Proof link copied')}catch(e){prompt('Copy this proof link:',url)}}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]))}
-const FEED_DISCOVER={shorts:{listType:'search',list:'youtube shorts'},study:{listType:'search',list:'study with me'},lofi:{listType:'search',list:'lofi hip hop radio'},news:{listType:'search',list:'world news today'},tech:{listType:'search',list:'technology explained'}};
+const FEED_DISCOVER={
+  shorts:{videos:['aqz-KE-bpKQ','LXb3EKWsInQ','hY7m5jjJ9mM','C0DPdy98e4c','ScMzIvxBSi4','M7lc1UVf-VE','jNQXAC9IVRw']},
+  study:{videos:['rfscVS0vtbw','8hly31xKli0','PkZtBOsezNY','W6NZfCO5SIk','Hd4uSOAnpbU']},
+  lofi:{videos:['jfKfPfyJRdk','5qap5aO4i9A','DWcJFNfaw9c','lTRiuwW7F0U']},
+  news:{videos:['9Auq9mYxFEE','jLTbtdp_R9k','Xim7fMBm0z0']},
+  tech:{videos:['8hly31xKli0','PkZtBOsezNY','rfscVS0vtbw','W6NZfCO5SIk']}
+};
 let ytPlayer=null,ytReady=false;
-function onYouTubeIframeAPIReady(){ytReady=true;if(state.feedMode)setupFeedPlayer()}
+function onYouTubeIframeAPIReady(){ytReady=true;if(state.feedMode){const k=(state.feedPlaylistId||'').replace('discover:','');setupFeedPlayer(FEED_DISCOVER[k]?k:'shorts')}}
 window.onYouTubeIframeAPIReady=onYouTubeIframeAPIReady;
 function parseYouTubeInput(raw){const s=(raw||'').trim();if(!s)return null;let list=null,vid=null;try{const u=new URL(s.startsWith('http')?s:'https://'+s);list=u.searchParams.get('list');if(u.hostname.includes('youtu.be'))vid=u.pathname.slice(1).split('/')[0];else if(u.pathname.includes('/shorts/'))vid=u.pathname.split('/shorts/')[1].split('/')[0];else if(u.pathname.includes('/embed/'))vid=u.pathname.split('/embed/')[1].split('/')[0];else if(u.pathname.includes('/watch'))vid=u.searchParams.get('v');else if(u.pathname.includes('/playlist'))list=list||u.searchParams.get('list')}catch(e){if(/^[\w-]{11}$/.test(s))vid=s;if(/^PL[\w-]+$/.test(s)||/^UU[\w-]+$/.test(s))list=s}return{list,vid}}
 function setupFeedPlayer(discoverKey){
   const wrap=document.getElementById('feedFrameWrap');
   if(!wrap)return;
-  let listType=null,list=null,vid=null;
+  let videoId=null, playlistParam=null, listId=null, videoList=null;
   if(discoverKey&&FEED_DISCOVER[discoverKey]){
-    listType=FEED_DISCOVER[discoverKey].listType;
-    list=FEED_DISCOVER[discoverKey].list;
+    const cfg=FEED_DISCOVER[discoverKey];
     state.feedPlaylistId='discover:'+discoverKey;
     document.querySelectorAll('.feed-chip').forEach(c=>c.classList.toggle('active',c.dataset.discover===discoverKey));
+    if(cfg.videos&&cfg.videos.length){
+      videoList=cfg.videos;
+      state.feedVideoIds=cfg.videos.slice();
+      state.feedIndex=0;
+      videoId=cfg.videos[0];
+      if(cfg.videos.length>1)playlistParam=cfg.videos.slice(1).join(',');
+    }else if(cfg.list){listId=cfg.list}
   }else{
-    const parsed=parseYouTubeInput(document.getElementById('feedUrlInput')?.value||state.feedPlaylistId);
+    const parsed=parseYouTubeInput(document.getElementById('feedUrlInput')?.value||(state.feedPlaylistId&&!String(state.feedPlaylistId).startsWith('discover')?state.feedPlaylistId:''));
     if(!parsed||(!parsed.list&&!parsed.vid)){showToast('Paste a YouTube link or pick a topic');return}
-    if(parsed.list){listType='playlist';list=parsed.list;state.feedPlaylistId=parsed.list}
-    if(parsed.vid){vid=parsed.vid;state.feedVideoIds=[parsed.vid];state.feedIndex=0}
+    if(parsed.list){listId=parsed.list;state.feedPlaylistId=parsed.list}
+    if(parsed.vid){videoId=parsed.vid;state.feedVideoIds=[parsed.vid];state.feedIndex=0}
     document.querySelectorAll('.feed-chip').forEach(c=>c.classList.remove('active'));
   }
   saveLocal();
   wrap.style.display='block';
   const elId='feedFrame';
   const host=document.getElementById(elId);
-  if(host){
-    const div=document.createElement('div');
-    div.id=elId;
-    host.parentNode.replaceChild(div,host);
-  }
+  if(host){const div=document.createElement('div');div.id=elId;host.parentNode.replaceChild(div,host)}
   const start=()=>{
     if(typeof YT==='undefined'||!YT.Player){setTimeout(start,200);return}
     if(ytPlayer&&ytPlayer.destroy)try{ytPlayer.destroy()}catch(e){}
-    const opts={height:'100%',width:'100%',playerVars:{autoplay:1,rel:0,modestbranding:1,playsinline:1}};
-    if(listType==='search'&&list){opts.playerVars.listType='search';opts.playerVars.list=list}
-    else if(listType==='playlist'&&list){opts.playerVars.listType='playlist';opts.playerVars.list=list}
-    else if(vid){opts.videoId=vid}
+    const opts={height:'100%',width:'100%',playerVars:{autoplay:1,rel:0,modestbranding:1,playsinline:1,controls:1}};
+    if(listId){opts.playerVars.listType='playlist';opts.playerVars.list=listId}
+    else if(videoId){opts.videoId=videoId;if(playlistParam)opts.playerVars.playlist=playlistParam}
     else{showToast('Nothing to play');return}
     ytPlayer=new YT.Player(elId,{...opts,events:{
       onReady:()=>showToast(discoverKey?'Playing '+discoverKey:'Feed ready'),
-      onError:(e)=>{console.warn('YT error',e);showToast('Video unavailable — try Next or another topic')}
+      onError:(e)=>{console.warn('YT error',e&&e.data);showToast('Clip blocked — try Next or another topic')}
     }});
   };
   start();
 }
 function feedNextVideo(){if(!ytPlayer){showToast('Load a feed first');return false}try{if(typeof ytPlayer.nextVideo==='function'){ytPlayer.nextVideo();return true}if(state.feedVideoIds&&state.feedVideoIds.length){state.feedIndex=(state.feedIndex+1)%state.feedVideoIds.length;ytPlayer.loadVideoById(state.feedVideoIds[state.feedIndex]);return true}}catch(e){console.warn(e)}showToast('Could not skip — try another topic');return false}
-function syncFeedUI(){const on=!!state.feedMode;const t=document.getElementById('feedToggle');if(t)t.classList.toggle('on',on);const lab=document.getElementById('feedToggleLabel');if(lab)lab.textContent=on?'Feed mode on':'Feed mode off';const panel=document.getElementById('feedPanel');if(panel){panel.classList.toggle('on',on);panel.style.display=on?'block':'none'}const row=document.getElementById('feedNextRow');if(row)row.style.display=on?'flex':'none';if(document.getElementById('feedUrlInput')&&state.feedPlaylistId&&!String(state.feedPlaylistId).startsWith('discover')&&!document.getElementById('feedUrlInput').value){document.getElementById('feedUrlInput').value=state.feedPlaylistId.startsWith('http')?state.feedPlaylistId:'https://www.youtube.com/playlist?list='+state.feedPlaylistId}}
+function syncFeedUI(){const on=!!state.feedMode;const t=document.getElementById('feedToggle');if(t)t.classList.toggle('on',on);const lab=document.getElementById('feedToggleLabel');if(lab)lab.textContent=on?'Feed on':'Feed off';const panel=document.getElementById('feedPanel');if(panel){panel.classList.toggle('on',on);panel.style.display=on?'block':'none'}const row=document.getElementById('feedNextRow');if(row)row.style.display=on?'flex':'none';if(document.getElementById('feedUrlInput')&&state.feedPlaylistId&&!String(state.feedPlaylistId).startsWith('discover')&&!document.getElementById('feedUrlInput').value){document.getElementById('feedUrlInput').value=state.feedPlaylistId.startsWith('http')?state.feedPlaylistId:'https://www.youtube.com/playlist?list='+state.feedPlaylistId}}
 function toggleFeedMode(){state.feedMode=!state.feedMode;if(state.currentSession)state.currentSession.mode=state.feedMode?'feed':'focus';syncFeedUI();saveLocal();showToast(state.feedMode?'Feed mode on':'Feed mode off');if(state.feedMode){if(state.feedPlaylistId&&!String(state.feedPlaylistId).startsWith('discover:')&&!String(state.feedPlaylistId).startsWith('discover'))setupFeedPlayer();else setupFeedPlayer('shorts')}}
 async function doNextFeed(){if(!state.feedMode){showToast('Turn on Feed mode first');return}if(!canCount()){if(!isFocused)showToast('Stay focused on this tab');return}if(!state.currentSession)startSession();state.currentSession.mode='feed';state.count+=1;celebrateMilestone(state.count);const now=Date.now();state.currentSession.counts+=1;state.currentSession.timestamps.push(now);state.lastCountAt=now;if(state.currentSession.timestamps.length>400)state.currentSession.timestamps=state.currentSession.timestamps.slice(-300);const display=document.getElementById('countDisplay');display.classList.add('pulse');setTimeout(()=>display.classList.remove('pulse'),120);setButtonCooling(true,state.voiceEnabled?'speaking...':'wait...');const nb=document.getElementById('nextFeedBtn');if(nb)nb.disabled=true;feedNextVideo();await speakNumber(state.count);if(state.count>=state.goal)document.getElementById('finishedBanner').style.display='block';if(!pendingChallenge&&state.nextChallengeAt&&state.count>=state.nextChallengeAt)showChallenge();else if(!state.nextChallengeAt&&state.count>=20)scheduleNextChallenge();saveLocal();scheduleSync();updateUI();setTimeout(()=>{setButtonCooling(false,'or press Space');if(nb)nb.disabled=false},MIN_INTERVAL_MS)}
 function updateNotesJournal(){const el=document.getElementById('notesJournal');if(!el)return;const notes=[];if(state.currentSession&&state.currentSession.note)notes.push({...state.currentSession,live:true});[...(state.sessions||[])].reverse().forEach(s=>{if(s.note&&s.note.trim())notes.push(s)});if(!notes.length){el.innerHTML='<div class="empty">Notes you save while counting show up here</div>';return}el.innerHTML=notes.slice(0,40).map(s=>{const mode=(s.mode||'focus');const when=new Date(s.start).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});const live=s.live?' · live':'';return '<div class="note-entry"><div class="note-meta"><span class="note-mode '+mode+'">'+mode+'</span>+'+(s.counts||0)+' counts · '+when+live+'</div><div class="note-body">'+esc(s.note)+'</div></div>'}).join('')}
