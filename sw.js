@@ -1,5 +1,5 @@
-const CACHE = 'tvc-v21';
-const ASSETS = ['./', './index.html', './app.js', './manifest.json', './FEATURES.md'];
+const CACHE = 'tvc-v22';
+const ASSETS = ['./', './index.html', './app.js', './app.full.js', './manifest.json', './FEATURES.md'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
@@ -8,7 +8,7 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('app.js')) {
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('app.js') || url.pathname.endsWith('app.full.js')) {
     e.respondWith(fetch(e.request).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return res; }).catch(() => caches.match(e.request)));
     return;
   }
