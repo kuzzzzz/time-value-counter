@@ -4,6 +4,11 @@
     let t=await r.text();
     if(t.length<10000){console.error('core app fetch failed',t.length);return}
 
+    // let/const from eval are not visible to this outer script — use var so they hang off window
+    t=t.replace(/^let state=/m,'var state=');
+    t=t.replace(/^let user=/m,'var user=');
+    t=t.replace(/^let sb=/m,'var sb=');
+
     // Stop updateUI filling the draft from session.note
     t=t.replace(
       "const noteEl=document.getElementById('noteInput');if(document.activeElement!==noteEl)noteEl.value=state.currentSession?.note||'';",
@@ -18,7 +23,7 @@
     );
     t=t.replace("if(!state.voiceRate)state.voiceRate=1;","if(!state.voiceRate)state.voiceRate=1;if(!Array.isArray(state.notes))state.notes=[];");
 
-    // Core save: archive + clear (journal override applied after eval)
+    // Core save: archive + clear
     t=t.replace(
       "document.getElementById('saveNoteBtn').addEventListener('click',()=>{if(!state.currentSession)startSession();state.currentSession.note=document.getElementById('noteInput').value.trim();if(!state.currentSession.mode)state.currentSession.mode=state.feedMode?'feed':'focus';saveLocal();updateNotesJournal();showToast('Note saved')});",
       "document.getElementById('saveNoteBtn').addEventListener('click',()=>{const text=(document.getElementById('noteInput').value||'').trim();if(!text){showToast('Type a note first');return}if(!state.currentSession)startSession();if(!state.currentSession.mode)state.currentSession.mode=state.feedMode?'feed':'focus';if(!Array.isArray(state.notes))state.notes=[];state.notes.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),text:text,at:Date.now(),mode:state.currentSession.mode,counts:state.currentSession.counts||0,countAt:state.count||0});if(state.notes.length>500)state.notes=state.notes.slice(-500);state.currentSession.note='';document.getElementById('noteInput').value='';saveLocal();if(typeof scheduleSync==='function')scheduleSync();updateNotesJournal();showToast('Note saved to archive')});"
@@ -26,38 +31,40 @@
 
     (0,eval)(t);
 
-    // --- Reliable overrides after core is running ---
-    if(!Array.isArray(state.notes))state.notes=[];
+    // Use window.state after var conversion
+    var S=window.state;
+    if(!S){console.error('[tvc] state missing after eval');return}
+    if(!Array.isArray(S.notes))S.notes=[];
 
     window.updateNotesJournal=function(filterQ){
-      const el=document.getElementById('notesJournal');
+      var el=document.getElementById('notesJournal');
       if(!el)return;
-      if(!Array.isArray(state.notes))state.notes=[];
-      let list=state.notes.slice().reverse();
-      const q=(filterQ||'').toLowerCase();
+      if(!Array.isArray(S.notes))S.notes=[];
+      var list=S.notes.slice().reverse();
+      var q=(filterQ||'').toLowerCase();
       if(q)list=list.filter(function(n){return (n.text||'').toLowerCase().includes(q)});
       if(!list.length){
         el.innerHTML='<div class="empty">'+(q?'No notes match':'Notes stay in an archive after you save')+'</div>';
         return;
       }
       el.innerHTML=list.slice(0,80).map(function(n){
-        const mode=(n.mode||'focus');
-        const when=new Date(n.at||Date.now()).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        var mode=(n.mode||'focus');
+        var when=new Date(n.at||Date.now()).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
         return '<div class="note-entry"><div class="note-meta"><span class="note-mode '+mode+'">'+mode+'</span>@'+(n.countAt!=null?formatNumber(n.countAt):'\u2014')+' \u00b7 '+when+'</div><div class="note-body">'+esc(n.text||'')+'</div></div>';
       }).join('');
     };
 
     window.exportNotes=function(){
-      if(!Array.isArray(state.notes))state.notes=[];
-      if(!state.notes.length){showToast('No notes to export');return}
-      const text=state.notes.map(function(n){
+      if(!Array.isArray(S.notes))S.notes=[];
+      if(!S.notes.length){showToast('No notes to export');return}
+      var text=S.notes.map(function(n){
         return '['+new Date(n.at||Date.now()).toISOString()+'] mode='+(n.mode||'focus')+' count@'+(n.countAt||0)+'\n'+(n.text||'');
       }).join('\n\n---\n\n');
-      const a=document.createElement('a');
+      var a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));
       a.download='tvc-notes-'+Date.now()+'.txt';
       a.click();
-      showToast(state.notes.length+' notes exported');
+      showToast(S.notes.length+' notes exported');
     };
 
     var exp=document.getElementById('exportNotesBtn');
@@ -72,6 +79,6 @@
     }
 
     updateNotesJournal();
-    console.log('[tvc] notes archive ready, count=', state.notes.length);
+    console.log('[tvc] notes archive ready, count=', S.notes.length);
   }catch(e){console.error(e)}
 })();
