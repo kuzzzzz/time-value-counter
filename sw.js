@@ -1,5 +1,5 @@
-const CACHE = 'tvc-v20';
-const ASSETS = ['./', './index.html', './app.js', './manifest.json'];
+const CACHE = 'tvc-v21';
+const ASSETS = ['./', './index.html', './app.js', './manifest.json', './FEATURES.md'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
