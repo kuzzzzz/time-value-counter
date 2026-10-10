@@ -1,16 +1,13 @@
 (async function(){
   try{
-    const parts=[];
-    for(let i=0;i<4;i++){
-      const r=await fetch('./app.b64.'+i+'?v=23');
-      parts.push(await r.text());
-    }
-    const b64=parts.join('');
-    const bin=atob(b64);
-    const bytes=new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-    const code=new TextDecoder().decode(bytes);
-    if(code.length<5000){console.error('decode failed',code.length);return}
+    const r=await fetch('./app.gz.b64?v=23');
+    const b64=await r.text();
+    if(!b64||b64.length<100){console.error('app.gz.b64 missing');return}
+    const bin=Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0)});
+    const ds=new DecompressionStream('gzip');
+    const stream=new Blob([bin]).stream().pipeThrough(ds);
+    const code=await new Response(stream).text();
+    if(code.length<5000){console.error('decompress failed',code.length);return}
     (0,eval)(code);
   }catch(e){console.error(e)}
 })();
