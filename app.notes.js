@@ -143,6 +143,19 @@
       }catch(e){console.warn(e);showToast('Sync failed')}
     };
   }
+  if(typeof updateUI==='function'){
+    var _updateUI=updateUI;
+    window.updateUI=function(){
+      _updateUI();
+      var ni=document.getElementById('noteInput');
+      if(!ni)return;
+      if(document.activeElement!==ni){
+        var sessNote=(state.currentSession&&state.currentSession.note)||'';
+        if(!sessNote)ni.value='';
+      }
+    };
+  }
+  if(state.currentSession)state.currentSession.note='';
   migrateSessionNotesToArchive();
   saveLocal();
   updateNotesJournal();
