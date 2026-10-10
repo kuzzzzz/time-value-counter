@@ -14,7 +14,6 @@
       state.notes.push({id:noteId(),text:String(s.note).trim(),at:at,mode:s.mode||'focus',counts:s.counts||0,countAt:state.count||0});
     }
     (state.sessions||[]).forEach(addFrom);
-    if(state.currentSession)addFrom(state.currentSession);
     if(state.notes.length>500)state.notes=state.notes.slice(-500);
   }
   window.saveNoteToArchive=function(text,meta){
@@ -57,7 +56,7 @@
     el.innerHTML=list.slice(0,80).map(function(n){
       var mode=(n.mode||'focus');
       var when=new Date(n.at||Date.now()).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      return '<div class="note-entry"><div class="note-meta"><span class="note-mode '+mode+'">'+mode+'</span>@'+(n.countAt!=null?formatNumber(n.countAt):'—')+' · '+when+'</div><div class="note-body">'+esc(n.text||'')+'</div></div>';
+      return '<div class="note-entry"><div class="note-meta"><span class="note-mode '+mode+'">'+mode+'</span>@'+(n.countAt!=null?formatNumber(n.countAt):'\u2014')+' \u00b7 '+when+'</div><div class="note-body">'+esc(n.text||'')+'</div></div>';
     }).join('');
   };
   window.exportNotes=function(){
@@ -83,9 +82,11 @@
       var text=(document.getElementById('noteInput').value||'').trim();
       if(!text){showToast('Type a note first');return}
       if(!state.currentSession)startSession();
-      state.currentSession.note=text;
       if(!state.currentSession.mode)state.currentSession.mode=state.feedMode?'feed':'focus';
       saveNoteToArchive(text,{mode:state.currentSession.mode,counts:state.currentSession.counts||0});
+      state.currentSession.note='';
+      var ni=document.getElementById('noteInput');
+      if(ni)ni.value='';
       saveLocal();
       if(typeof scheduleSync==='function')scheduleSync();
       updateNotesJournal();
